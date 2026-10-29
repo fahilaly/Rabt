@@ -123,7 +123,15 @@ function Board({ hospitalId, list, onOpen }: { hospitalId: string; list: Pilgrim
                       "–"
                     )}
                   </td>
-                  <td className="mono c-time">{p.pickup?.eta && p.status === "accepted" ? fmtTime(p.pickup.eta) : "–"}</td>
+                  <td className="mono c-time">
+                    {p.pickup?.eta && p.status === "accepted" ? (
+                      fmtTime(p.pickup.eta)
+                    ) : p.status === "assigned" && p.pickup?.estimateMin && p.pickup.assignedAt ? (
+                      <span className="b-est" title="Rabt estimate, not yet confirmed by the driver">~{fmtTime(p.pickup.assignedAt + p.pickup.estimateMin * 60000)}</span>
+                    ) : (
+                      "–"
+                    )}
+                  </td>
                   <td className={`b-status ${tone}`}>{label}</td>
                   <td className={`mono c-num b-wait ${wait >= 20 ? "b-amber" : ""} ${l ? "b-red" : ""}`}>{wait}</td>
                 </tr>
@@ -150,7 +158,7 @@ function Board({ hospitalId, list, onOpen }: { hospitalId: string; list: Pilgrim
           </tbody>
         </table>
       </div>
-      <footer className="board-foot">Wait = minutes since the patient was confirmed ready. Rows turn red when a vehicle passes its arrival time.</footer>
+      <footer className="board-foot">Wait = minutes since the patient was confirmed ready. ~ = Rabt estimate until the driver confirms. Rows turn red when a vehicle passes its arrival time.</footer>
     </section>
   );
 }

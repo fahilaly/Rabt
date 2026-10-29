@@ -8,6 +8,8 @@ export interface Hospital {
   name: string;
   area: string;
   wardPhone: string;
+  lat: number;
+  lng: number;
 }
 
 export interface Company {
@@ -26,6 +28,10 @@ export interface Driver {
   wheelchair: boolean;
   // a company's own driver, or null for the licensed fleet partner
   companyId: string | null;
+  // last known position (a live version gets this from the driver's phone GPS)
+  at: string;
+  lat: number;
+  lng: number;
 }
 
 export type Status =
@@ -59,6 +65,7 @@ export interface Pickup {
   assignedAt?: number;
   acceptedAt?: number;
   eta?: number; // promised arrival at the hospital
+  estimateMin?: number; // Rabt's travel-time estimate when the driver was assigned
   pickedUpAt?: number;
   arrivedAt?: number;
   lateAlertSent?: boolean;

@@ -60,7 +60,7 @@ export function makeSeed(now: number): State {
       companyId: "c2", hospitalId: "h1", accommodation: "Mina, Camp 41, tent 12",
       admittedAt: ago(500), status: "assigned", clinicalNote: "Hypertension, medication adjusted",
       checklist: { medicines: true, instructions: true, cleared: true, mobility: "walking" },
-      pickup: { requestedAt: ago(11), mode: "own", driverId: "d3", assignedAt: ago(6) },
+      pickup: { requestedAt: ago(11), mode: "own", driverId: "d3", assignedAt: ago(6), estimateMin: 38 },
       events: [ev(500, "Registered at emergency", "Desk, Al-Haram East"), ev(11, "Ready for transport, pickup requested", "Recovery ward, Al-Haram East"), ev(6, "Own vehicle assigned: Khalid Al-Harbi", "Rawasi Hajj Campaign")],
     },
     // --- accepted, on the way, on time ---
@@ -101,12 +101,12 @@ export function makeSeed(now: number): State {
   ];
 
   return {
-    version: 1,
+    version: 2,
     clockOffset: 0,
     hospitals: [
-      { id: "h1", name: "Al-Haram East Hospital", area: "Central Makkah", wardPhone: "012 000 1101" },
-      { id: "h2", name: "Mina Valley Hospital", area: "Mina", wardPhone: "012 000 2202" },
-      { id: "h3", name: "Aziziyah Medical Center", area: "Aziziyah", wardPhone: "012 000 3303" },
+      { id: "h1", name: "Al-Haram East Hospital", area: "Central Makkah", wardPhone: "012 000 1101", lat: 21.4241, lng: 39.8302 },
+      { id: "h2", name: "Mina Valley Hospital", area: "Mina", wardPhone: "012 000 2202", lat: 21.4133, lng: 39.8931 },
+      { id: "h3", name: "Aziziyah Medical Center", area: "Aziziyah", wardPhone: "012 000 3303", lat: 21.4062, lng: 39.8571 },
     ],
     companies: [
       { id: "c1", name: "Al-Safwa Umrah", type: "umrah", plan: "full", manager: "Rakan Al-Dosari" },
@@ -114,12 +114,12 @@ export function makeSeed(now: number): State {
       { id: "c3", name: "Noor Al-Huda Tours", type: "umrah", plan: "full", manager: "Hind Al-Subaie" },
     ],
     drivers: [
-      { id: "d1", name: "Saeed Al-Malki", vehicle: "Toyota HiAce", plate: "KSA 4821", wheelchair: false, companyId: "c1" },
-      { id: "d2", name: "Turki Al-Shehri", vehicle: "Hyundai H-1", plate: "KSA 7730", wheelchair: true, companyId: "c1" },
-      { id: "d3", name: "Khalid Al-Harbi", vehicle: "Toyota Coaster", plate: "KSA 1195", wheelchair: false, companyId: "c2" },
-      { id: "d4", name: "Nasser Al-Zahrani", vehicle: "Ford Transit (accessible)", plate: "KSA 3307", wheelchair: true, companyId: null },
-      { id: "d5", name: "Majed Al-Otaibi", vehicle: "Toyota HiAce", plate: "KSA 5562", wheelchair: false, companyId: null },
-      { id: "d6", name: "Faisal Al-Juhani", vehicle: "Hyundai Staria", plate: "KSA 9024", wheelchair: false, companyId: null },
+      { id: "d1", name: "Saeed Al-Malki", vehicle: "Toyota HiAce", plate: "KSA 4821", wheelchair: false, companyId: "c1", at: "Ibrahim Al-Khalil St", lat: 21.4172, lng: 39.8231 },
+      { id: "d2", name: "Turki Al-Shehri", vehicle: "Hyundai H-1", plate: "KSA 7730", wheelchair: true, companyId: "c1", at: "Ajyad", lat: 21.4186, lng: 39.8268 },
+      { id: "d3", name: "Khalid Al-Harbi", vehicle: "Toyota Coaster", plate: "KSA 1195", wheelchair: false, companyId: "c2", at: "Mina, Camp 38", lat: 21.4151, lng: 39.8879 },
+      { id: "d4", name: "Nasser Al-Zahrani", vehicle: "Ford Transit (accessible)", plate: "KSA 3307", wheelchair: true, companyId: null, at: "Aziziyah", lat: 21.4041, lng: 39.8603 },
+      { id: "d5", name: "Majed Al-Otaibi", vehicle: "Toyota HiAce", plate: "KSA 5562", wheelchair: false, companyId: null, at: "Al-Awali", lat: 21.3802, lng: 39.8652 },
+      { id: "d6", name: "Faisal Al-Juhani", vehicle: "Hyundai Staria", plate: "KSA 9024", wheelchair: false, companyId: null, at: "Al-Shisha", lat: 21.4349, lng: 39.8449 },
     ],
     pilgrims,
     notices: [

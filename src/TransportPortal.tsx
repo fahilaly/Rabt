@@ -3,6 +3,7 @@ import { LuAccessibility, LuPhone } from "react-icons/lu";
 import type { Pilgrim } from "./types";
 import { fmtTime, isLate, minutes, useStore } from "./store";
 import { EmptyRow, PageHeader, Section, StatusText } from "./ui";
+import { suggestChoice } from "./eta";
 
 type Tab = "driver" | "dispatch";
 
@@ -67,10 +68,13 @@ function DriverApp({ driverId }: { driverId: string }) {
   );
 }
 
+const ETA_CHOICES = [10, 15, 20, 30];
+
 function Trip({ p, now }: { p: Pilgrim; now: number }) {
-  const { hospital, accept, pickedUp, arrived, company } = useStore();
-  const [eta, setEta] = useState(15);
+  const { hospital, accept, pickedUp, arrived, company, etaFor } = useStore();
   const h = hospital(p.hospitalId);
+  const est = p.pickup?.estimateMin ?? etaFor(p.pickup!.driverId!, p.hospitalId).minutes;
+  const [eta, setEta] = useState(() => suggestChoice(est, ETA_CHOICES));
   const late = isLate(p, now);
   const step = p.status === "assigned" ? "New pickup" : p.status === "accepted" ? "Go to hospital" : "Take to accommodation";
   return (
@@ -96,9 +100,12 @@ function Trip({ p, now }: { p: Pilgrim; now: number }) {
       )}
       {p.status === "assigned" && (
         <>
-          <div className="trip-q">I can be at the hospital in</div>
+          <div className="trip-q">
+            I can be at the hospital in
+            <span className="trip-est">Rabt estimate: {est} min</span>
+          </div>
           <div className="eta" role="radiogroup" aria-label="Arrival time">
-            {[10, 15, 20, 30].map((m) => (
+            {ETA_CHOICES.map((m) => (
               <button key={m} type="button" role="radio" aria-checked={eta === m} className={eta === m ? "on" : ""} onClick={() => setEta(m)}>
                 {m} min
               </button>
@@ -132,7 +139,7 @@ function Trip({ p, now }: { p: Pilgrim; now: number }) {
 // Fleet dispatch: the licensed transport partner assigns drivers to Rabt rides.
 
 function Dispatch() {
-  const { state, now, hospital, company, driver, dispatchAssign } = useStore();
+  const { state, now, hospital, company, driver, dispatchAssign, etaFor } = useStore();
   const [pick, setPick] = useState<Record<string, string>>({});
   const partner = state.drivers.filter((d) => d.companyId === null);
   const open = state.pilgrims.filter((p) => p.status === "ride_requested").sort((a, b) => a.pickup!.requestedAt - b.pickup!.requestedAt);
@@ -177,13 +184,15 @@ function Dispatch() {
                         </label>
                         <select id={`dispatch-${p.id}`} className="select sm" value={sel} onChange={(e) => setPick({ ...pick, [p.id]: e.target.value })}>
                           <option value="">Choose driver</option>
-                          {partner.map((d) => (
-                            <option key={d.id} value={d.id} disabled={needsChair && !d.wheelchair}>
-                              {d.name}
-                              {d.wheelchair ? " (accessible)" : ""}
-                              {busy(d.id) ? ", on a trip" : ""}
-                            </option>
-                          ))}
+                          {[...partner]
+                            .sort((a, b) => etaFor(a.id, p.hospitalId).minutes - etaFor(b.id, p.hospitalId).minutes)
+                            .map((d) => (
+                              <option key={d.id} value={d.id} disabled={needsChair && !d.wheelchair}>
+                                {d.name} · {etaFor(d.id, p.hospitalId).minutes} min
+                                {d.wheelchair ? " · accessible" : ""}
+                                {busy(d.id) ? " · on a trip" : ""}
+                              </option>
+                            ))}
                         </select>
                         <button className="btn primary sm" disabled={!sel} onClick={() => dispatchAssign(p.id, sel)}>
                           Assign

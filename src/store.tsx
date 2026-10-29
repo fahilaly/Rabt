@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { DirectoryEntry, Notice, Pilgrim, ReadyChecklist, State, Status } from "./types";
 import { makeSeed } from "./seed";
+import { estimate, type Eta } from "./eta";
 
 // ---------------------------------------------------------------------------
 // Prototype store. Everything lives in the browser and syncs between open tabs.
@@ -17,7 +18,7 @@ function load(): State | null {
     const raw = localStorage.getItem(KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as State;
-    return s && s.version === 1 ? s : null;
+    return s && s.version === 2 ? s : null;
   } catch {
     return null;
   }
@@ -79,6 +80,7 @@ interface Ctx {
   hospital: (id: string) => State["hospitals"][number];
   company: (id: string) => State["companies"][number];
   driver: (id?: string) => State["drivers"][number] | undefined;
+  etaFor: (driverId: string, hospitalId: string) => Eta;
   lookup: (idType: DirectoryEntry["idType"], idNumber: string) => DirectoryEntry | Pilgrim | null;
   register: (hospitalId: string, entry: DirectoryEntry) => string;
   markReady: (pilgrimId: string, checklist: ReadyChecklist) => void;
@@ -179,6 +181,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const hospital = (id: string) => state.hospitals.find((h) => h.id === id)!;
     const company = (id: string) => state.companies.find((c) => c.id === id)!;
     const driver = (id?: string) => state.drivers.find((d) => d.id === id);
+    const etaFor = (driverId: string, hospitalId: string) => estimate(driver(driverId)!, hospital(hospitalId));
 
     return {
       state,
@@ -186,6 +189,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       hospital,
       company,
       driver,
+      etaFor,
       lookup: (idType, idNumber) => {
         const n = idNumber.trim().toUpperCase();
         const existing = state.pilgrims.find((p) => p.idNumber.toUpperCase() === n && p.status !== "arrived");
@@ -239,9 +243,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             const at = Date.now() + s.clockOffset * MIN;
             const d = s.drivers.find((x) => x.id === driverId)!;
             const c = s.companies.find((x) => x.id === p.companyId)!;
+            const h = s.hospitals.find((x) => x.id === p.hospitalId)!;
             return {
               status: "assigned",
-              pickup: { ...p.pickup!, mode: "own", driverId, assignedAt: at },
+              pickup: { ...p.pickup!, mode: "own", driverId, assignedAt: at, estimateMin: estimate(d, h).minutes },
               events: [...p.events, { at, label: `Own vehicle assigned: ${d.name}`, by: c.name }],
             };
           },
@@ -269,9 +274,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           (p, s) => {
             const at = Date.now() + s.clockOffset * MIN;
             const d = s.drivers.find((x) => x.id === driverId)!;
+            const h = s.hospitals.find((x) => x.id === p.hospitalId)!;
             return {
               status: "assigned",
-              pickup: { ...p.pickup!, mode: "rabt", driverId, assignedAt: at },
+              pickup: { ...p.pickup!, mode: "rabt", driverId, assignedAt: at, estimateMin: estimate(d, h).minutes },
               events: [...p.events, { at, label: `Partner driver assigned: ${d.name}`, by: "Fleet dispatch" }],
             };
           },

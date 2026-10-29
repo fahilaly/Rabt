@@ -21,6 +21,11 @@ interface Prefs {
   ttab: TTab;
 }
 const PREFS_KEY = "rabt-prototype-view-2";
+const ROLES: [Portal, string, string][] = [
+  ["hospital", "Hospital", "1"],
+  ["company", "Company", "2"],
+  ["transport", "Transport", "3"],
+];
 const defaults: Prefs = { portal: "hospital", hospitalId: "h1", companyId: "c1", driverId: "d1", htab: "ward", ctab: "requests", ttab: "driver" };
 
 function loadPrefs(): Prefs {
@@ -52,6 +57,18 @@ export default function App() {
     setOpenId(null);
     setBellOpen(false);
   };
+
+  // Keys 1, 2, 3 switch role (handy when presenting). Ignored while typing.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement;
+      if (e.metaKey || e.ctrlKey || e.altKey || t.closest("input, select, textarea, [role=dialog]")) return;
+      const r = ROLES.find(([, , k]) => k === e.key);
+      if (r) set({ portal: r[0] });
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
 
   const audience =
     prefs.portal === "hospital"
@@ -149,15 +166,15 @@ export default function App() {
           </button>
         </div>
 
+        <div className="role-switch" role="tablist" aria-label="Role">
+          {ROLES.map(([r, label, key]) => (
+            <button key={r} role="tab" aria-selected={prefs.portal === r} className={prefs.portal === r ? "on" : ""} title={`${label} (press ${key})`} onClick={() => set({ portal: r })}>
+              {label}
+            </button>
+          ))}
+        </div>
+
         <div className="side-who">
-          <label className="label" htmlFor="role">
-            Role
-          </label>
-          <select id="role" className="select" value={prefs.portal} onChange={(e) => set({ portal: e.target.value as Portal })}>
-            <option value="hospital">Hospital staff</option>
-            <option value="company">Hajj or Umrah company</option>
-            <option value="transport">Transport</option>
-          </select>
           <label className="label" htmlFor="persona">
             {prefs.portal === "hospital" ? "Hospital" : prefs.portal === "company" ? "Company" : "Driver"}
           </label>

@@ -15,8 +15,8 @@ npm install
 npm run dev        # http://localhost:5173
 ```
 
-Open two tabs (one as **Hospital staff**, one as **Hajj or Umrah company**, chosen in the sidebar)
-to watch changes appear in both.
+Open two tabs (one as **Hospital**, one as **Company**, using the switch at the top of the
+sidebar) to watch changes appear in both. Keys **1**, **2** and **3** also switch role.
 
 ## The three portals
 
@@ -47,6 +47,7 @@ in_treatment → ready → (ride_requested) → assigned → accepted → picked
 | `src/types.ts` | Data model: hospitals, companies, drivers, pilgrims, pickups, timeline events, notifications |
 | `src/seed.ts` | Sample data (all names invented) |
 | `src/store.tsx` | State, actions, late detection, browser storage, tab sync |
+| `src/eta.ts` | Travel-time estimate (built-in now; Google Routes or OSRM examples for later) |
 | `src/HospitalPortal.tsx` | Ward board, patient list and drawer, ready checklist, register |
 | `src/CompanyPortal.tsx` | Pickup requests, assign vehicle, my pilgrims, history |
 | `src/TransportPortal.tsx` | Driver app, fleet dispatch |
@@ -90,7 +91,6 @@ All writes go through the action functions in `src/store.tsx`
 - Companies see: name, ID, hospital, stage, expected pickup time, mobility.
 - Every change is recorded on the pilgrim's timeline with who did it and when.
 
-## Not built yet
+## What's left
 
-Arabic interface (RTL), real logins, real Nusuk or booking lookups, a backend, SMS or push
-notifications, reports for the Ministry, and the in-app demo simulation.
+See [ROADMAP.md](ROADMAP.md): demo tasks first, then the real travel-time API, then what a pilot needs.

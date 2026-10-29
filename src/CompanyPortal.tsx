@@ -156,10 +156,10 @@ function RideButton({ p }: { p: Pilgrim }) {
 }
 
 function AssignModal({ p, companyId, onClose }: { p: Pilgrim | null; companyId: string; onClose: () => void }) {
-  const { state, assignOwn } = useStore();
+  const { state, assignOwn, etaFor } = useStore();
   const [driverId, setDriverId] = useState<string>("");
   if (!p) return null;
-  const drivers = state.drivers.filter((d) => d.companyId === companyId);
+  const drivers = state.drivers.filter((d) => d.companyId === companyId).sort((a, b) => etaFor(a.id, p.hospitalId).minutes - etaFor(b.id, p.hospitalId).minutes);
   const busy = (id: string) => state.pilgrims.some((x) => x.pickup?.driverId === id && ["assigned", "accepted", "picked_up"].includes(x.status));
   const needsChair = p.checklist?.mobility === "wheelchair";
   const chosen = drivers.find((d) => d.id === driverId);
@@ -179,13 +179,18 @@ function AssignModal({ p, companyId, onClose }: { p: Pilgrim | null; companyId: 
                 {d.wheelchair ? " · accessible" : ""}
                 {busy(d.id) ? " · on another trip" : ""}
               </span>
+              <span className="dim small opt-where">Now at {d.at}</span>
+            </span>
+            <span className="opt-eta">
+              <span className="mono">{etaFor(d.id, p.hospitalId).minutes} min</span>
+              <span className="dim small">{etaFor(d.id, p.hospitalId).km} km</span>
             </span>
           </label>
         ))}
         {!drivers.length && <p className="dim">No drivers set up for this company.</p>}
       </fieldset>
       {needsChair && chosen && !chosen.wheelchair && <p className="note amber">This pilgrim uses a wheelchair and this vehicle isn't marked accessible.</p>}
-      <p className="dim small">The driver confirms an arrival time on their phone. The hospital sees it on the ward board.</p>
+      <p className="dim small">Times are Rabt's estimate to reach the hospital. The driver confirms an arrival time on their phone, and the hospital sees it on the ward board.</p>
       <div className="modal-actions">
         <button className="btn" onClick={onClose}>
           Cancel

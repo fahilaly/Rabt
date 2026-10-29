@@ -112,7 +112,7 @@ svg { flex: none; vertical-align: -2px; }
 :focus-visible { outline: 3px solid var(--focus); outline-offset: 1px; }
 
 /* ---------- shell ---------- */
-.shell { display: grid; grid-template-columns: 236px minmax(0, 1fr); min-height: 100%; }
+.shell { display: grid; grid-template-columns: 256px minmax(0, 1fr); min-height: 100%; }
 .side {
   position: sticky;
   top: env(safe-area-inset-top, 0px);
@@ -132,7 +132,11 @@ svg { flex: none; vertical-align: -2px; }
 .wm-ar { font-family: var(--arabic); font-weight: 700; font-size: 1.35rem; color: var(--accent); line-height: 1; }
 .wm-en { font-weight: 600; font-size: 1.02rem; letter-spacing: -0.01em; }
 .side-who { display: grid; gap: 4px; }
-.side-who .select + .label { margin-top: 6px; }
+.role-switch { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border: 1px solid var(--line-2); border-radius: 4px; background: var(--bg); overflow: hidden; }
+.role-switch button { border: 0; border-left: 1px solid var(--line-2); background: none; padding: 7px 4px; font-size: 0.84rem; font-weight: 500; color: var(--ink-2); cursor: pointer; }
+.role-switch button:first-child { border-left: 0; }
+.role-switch button:hover { color: var(--ink); background: var(--hover); }
+.role-switch button.on { background: var(--ink); color: var(--bg); }
 .side-nav { display: grid; gap: 1px; }
 .nav-item {
   display: flex;
@@ -257,6 +261,9 @@ svg { flex: none; vertical-align: -2px; }
 .radio input, .check input { margin: 2px 0 0; width: 16px; height: 16px; accent-color: var(--accent); flex: none; }
 .checks { display: grid; gap: 10px; }
 .driver-opt { padding: 8px 0; border-bottom: 1px solid var(--line); }
+.driver-opt > span:nth-of-type(1) { flex: 1; min-width: 0; }
+.opt-where { display: block; }
+.opt-eta { display: grid; justify-items: end; text-align: right; }
 
 /* ---------- status ---------- */
 .status { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
@@ -394,6 +401,7 @@ svg { flex: none; vertical-align: -2px; }
 .b-green { color: var(--b-green); }
 .b-white { color: var(--b-text); }
 .b-wait { font-size: 1.25rem; }
+.b-est { color: var(--b-dim); }
 .row-late td { background: rgba(255, 95, 82, 0.08) !important; }
 .row-left td { color: #5d625e; }
 .row-left td.c-time { color: #6f6a55; }
@@ -416,7 +424,8 @@ svg { flex: none; vertical-align: -2px; }
 .trip-legs dd { margin: 0; }
 .trip-phone { display: block; color: var(--ink-2); }
 .trip-flag { color: var(--blue); font-weight: 500; }
-.trip-q { font-weight: 500; }
+.trip-q { font-weight: 500; display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.trip-est { font-weight: 400; font-size: 0.82rem; color: var(--ink-2); }
 .eta { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
 .eta button { height: 40px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--bg); cursor: pointer; font-weight: 500; }
 .eta button.on { border-color: var(--accent); background: var(--accent-tint); color: var(--accent); }
@@ -438,11 +447,7 @@ svg { flex: none; vertical-align: -2px; }
     border-right: 0;
     border-bottom: 1px solid var(--line);
   }
-  .side-who { grid-template-columns: 1fr 1fr; column-gap: 10px; }
-  .side-who .label:nth-of-type(1) { grid-column: 1; grid-row: 1; }
-  .side-who .select:nth-of-type(1) { grid-column: 1; grid-row: 2; }
-  .side-who .label:nth-of-type(2) { grid-column: 2; grid-row: 1; margin-top: 0; }
-  .side-who .select:nth-of-type(2) { grid-column: 2; grid-row: 2; }
+  .side-who { grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 10px; }
   .side-nav { display: flex; gap: 4px; overflow-x: auto; }
   .nav-item { white-space: nowrap; }
   .side-foot { margin-top: 0; padding-top: 10px; grid-template-columns: auto 1fr; align-items: center; }
