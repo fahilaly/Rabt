@@ -42,6 +42,7 @@ function Requests({ companyId, list, onOpen, onAssign }: { companyId: string; li
   const needs = list.filter((p) => p.status === "ready").sort((a, b) => a.pickup!.requestedAt - b.pickup!.requestedAt);
   const moving = list.filter((p) => ["ride_requested", "assigned", "accepted", "picked_up"].includes(p.status)).sort((a, b) => a.pickup!.requestedAt - b.pickup!.requestedAt);
   const inTreatment = list.filter((p) => p.status === "in_treatment").length;
+  const soon = list.filter((p) => p.status === "in_treatment").sort((a, b) => (a.expectedReadyAt ?? Infinity) - (b.expectedReadyAt ?? Infinity));
 
   return (
     <div className="page">
@@ -140,7 +141,44 @@ function Requests({ companyId, list, onOpen, onAssign }: { companyId: string; li
           </table>
         </div>
       </Section>
+
+      <Section title="Still in treatment" count={soon.length}>
+        <div className="table-wrap">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Pilgrim</th>
+                <th>Hospital</th>
+                <th className="r">Admitted</th>
+                <th className="r">Expected ready</th>
+              </tr>
+            </thead>
+            <tbody>
+              {soon.map((p) => (
+                <tr key={p.id} className="clickable" tabIndex={0} onClick={() => onOpen(p.id)} onKeyDown={(e) => e.key === "Enter" && onOpen(p.id)}>
+                  <td className="name">{p.name}</td>
+                  <td>{hospital(p.hospitalId).name}</td>
+                  <td className="mono r">{fmtTime(p.admittedAt)}</td>
+                  <td className="r">{expectedCell(p, now)}</td>
+                </tr>
+              ))}
+              {!soon.length && <EmptyRow cols={4} text="None of your pilgrims are in treatment." />}
+            </tbody>
+          </table>
+        </div>
+      </Section>
     </div>
+  );
+}
+
+function expectedCell(p: Pilgrim, now: number) {
+  if (!p.expectedReadyAt) return <span className="dim">Waiting for the doctor</span>;
+  const diff = minutes(p.expectedReadyAt - now);
+  return (
+    <>
+      <span className="mono">~{fmtTime(p.expectedReadyAt)}</span>
+      <span className="dim small">{p.expectedReadyAt > now ? ` · in ${fmtDuration(diff)}` : " · any time now"}</span>
+    </>
   );
 }
 
@@ -225,6 +263,7 @@ function InHospital({ list, onOpen }: { list: Pilgrim[]; onOpen: (id: string) =>
               <th>ID</th>
               <th>Hospital</th>
               <th>Status</th>
+              <th className="r">Expected ready</th>
               <th className="r">Since</th>
             </tr>
           </thead>
@@ -240,10 +279,11 @@ function InHospital({ list, onOpen }: { list: Pilgrim[]; onOpen: (id: string) =>
                 <td>
                   <StatusText p={p} now={now} />
                 </td>
+                <td className="r">{p.status === "in_treatment" ? expectedCell(p, now) : <span className="dim">Ready</span>}</td>
                 <td className="mono r">{p.status === "in_treatment" ? fmtTime(p.admittedAt) : fmtTime(p.pickup!.requestedAt)}</td>
               </tr>
             ))}
-            {!rows.length && <EmptyRow cols={5} text="None of your pilgrims are in hospital." />}
+            {!rows.length && <EmptyRow cols={6} text="None of your pilgrims are in hospital." />}
           </tbody>
         </table>
       </div>
@@ -317,6 +357,20 @@ function CompanyDrawer({ p, onClose, onAssign }: { p: Pilgrim | null; onClose: (
             <RideButton p={p} />
           </div>
           <p className="dim small">Waiting in the ward for {fmtDuration(minutes(now - p.pickup!.requestedAt))}.</p>
+        </div>
+      )}
+      {p.status === "in_treatment" && (
+        <div className="d-sec">
+          <p className="note">
+            In treatment since <span className="mono">{fmtTime(p.admittedAt)}</span>.{" "}
+            {p.expectedReadyAt ? (
+              <>
+                Expected ready around <span className="mono">{fmtTime(p.expectedReadyAt)}</span>. You will get a pickup request when the hospital confirms.
+              </>
+            ) : (
+              "The hospital has not given an expected ready time yet."
+            )}
+          </p>
         </div>
       )}
       {p.status !== "in_treatment" && (

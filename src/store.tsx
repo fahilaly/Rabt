@@ -1,7 +1,9 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import type { DirectoryEntry, Notice, Pilgrim, ReadyChecklist, State, Status } from "./types";
+import type { DemoState, DirectoryEntry, Notice, Pilgrim, ReadyChecklist, Sms, State, Status } from "./types";
 import { makeSeed } from "./seed";
 import { estimate, type Eta } from "./eta";
+import { conditionLabel } from "./stay";
+import { connectShared, type Shared } from "./sync";
 
 // ---------------------------------------------------------------------------
 // Prototype store. Everything lives in the browser and syncs between open tabs.
@@ -18,7 +20,7 @@ function load(): State | null {
     const raw = localStorage.getItem(KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as State;
-    return s && s.version === 2 ? s : null;
+    return s && s.version === 3 ? s : null;
   } catch {
     return null;
   }
@@ -83,6 +85,7 @@ interface Ctx {
   etaFor: (driverId: string, hospitalId: string) => Eta;
   lookup: (idType: DirectoryEntry["idType"], idNumber: string) => DirectoryEntry | Pilgrim | null;
   register: (hospitalId: string, entry: DirectoryEntry) => string;
+  diagnose: (pilgrimId: string, d: { conditionId: string; note: string; stayMin: number }) => void;
   markReady: (pilgrimId: string, checklist: ReadyChecklist) => void;
   assignOwn: (pilgrimId: string, driverId: string) => void;
   requestRide: (pilgrimId: string) => void;
@@ -92,6 +95,11 @@ interface Ctx {
   arrived: (pilgrimId: string) => void;
   advanceClock: (min: number) => void;
   reset: () => void;
+  setDemo: (d: DemoState | undefined) => void;
+  /** Demo only: move one pilgrim's whole story back in time (other patients are untouched). */
+  rewind: (pilgrimId: string, min: number) => void;
+  /** "shared" when synced across devices through the published link, else "local" */
+  syncMode: "shared" | "local";
 }
 
 const StoreCtx = createContext<Ctx | null>(null);
@@ -100,6 +108,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<State>(() => load() ?? makeSeed(Date.now()));
   const [tick, setTick] = useState(Date.now());
   const fromRemote = useRef(false);
+  const shared = useRef<Shared | null>(null);
+  const [syncMode, setSyncMode] = useState<"shared" | "local">("local");
 
   // tick the clock so waiting times stay current
   useEffect(() => {
@@ -121,7 +131,36 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     } catch {
       /* ignore */
     }
+    shared.current?.push(state);
   }, [state]);
+
+  // cross-device sync (only on the published link; see sync.ts)
+  const stateRef = useRef(state);
+  stateRef.current = state;
+  useEffect(() => {
+    let stop = () => {};
+    let needPush = false;
+    connectShared(
+      TAB_ID,
+      (remote) => {
+        if (remote.version !== 3) return;
+        fromRemote.current = true;
+        setState(remote);
+      },
+      () => {
+        // nobody has shared data yet: this device's data becomes the shared copy
+        if (shared.current) shared.current.push(stateRef.current);
+        else needPush = true;
+      }
+    ).then((sh) => {
+      if (!sh) return;
+      shared.current = sh;
+      setSyncMode("shared");
+      stop = sh.stop;
+      if (needPush) sh.push(stateRef.current);
+    });
+    return () => stop();
+  }, []);
 
   // receive changes from other tabs
   useEffect(() => {
@@ -141,9 +180,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     if (!late.length) return;
     setState((s) => {
       let notices = s.notices;
+      let messages = s.messages;
       const pilgrims = s.pilgrims.map((p) => {
         if (!late.find((l) => l.id === p.id)) return p;
         const drv = s.drivers.find((d) => d.id === p.pickup?.driverId);
+        messages = [
+          { ...smsCompany(s, p.companyId, `Rabt ALERT: the vehicle for ${p.name} is late. ${drv ? `${drv.name} (${drv.phone}) promised ${fmtTime(p.pickup!.eta!)}.` : ""} The hospital can see the delay.`), id: uid(), at: now },
+          ...messages,
+        ];
         notices = [
           notice(now, { kind: "company", id: p.companyId }, `Vehicle late for ${p.name}: arrival time passed${drv ? ` (${drv.name})` : ""}`, "warn", p.id),
           notice(now, { kind: "hospital", id: p.hospitalId }, `Vehicle late for ${p.name}. The company manager has been alerted.`, "warn", p.id),
@@ -155,29 +199,35 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           events: [...p.events, { at: now, label: "Vehicle late: arrival time passed. Company manager alerted", by: "Rabt" }],
         };
       });
-      return { ...s, pilgrims, notices };
+      return { ...s, pilgrims, notices, messages: messages.slice(0, 60) };
     });
   }, [now, state.pilgrims]);
 
   const update = useCallback(
-    (pilgrimId: string, fn: (p: Pilgrim, s: State) => Partial<Pilgrim>, makeNotices?: (p: Pilgrim, s: State) => Notice[]) => {
+    (
+      pilgrimId: string,
+      fn: (p: Pilgrim, s: State) => Partial<Pilgrim>,
+      makeNotices?: (p: Pilgrim, s: State) => Notice[],
+      makeSms?: (p: Pilgrim, s: State) => SmsDraft[]
+    ) => {
       setState((s) => {
         const at = Date.now() + s.clockOffset * MIN;
         let extra: Notice[] = [];
+        let texts: Sms[] = [];
         const pilgrims = s.pilgrims.map((p) => {
           if (p.id !== pilgrimId) return p;
           const next = { ...p, ...fn(p, s) };
           if (makeNotices) extra = makeNotices(next, s).map((n) => ({ ...n, at }));
+          if (makeSms) texts = makeSms(next, s).map((m) => ({ ...m, id: uid(), at }));
           return next;
         });
-        return { ...s, pilgrims, notices: [...extra, ...s.notices].slice(0, 80) };
+        return { ...s, pilgrims, notices: [...extra, ...s.notices].slice(0, 80), messages: [...texts, ...s.messages].slice(0, 60) };
       });
     },
     []
   );
 
   const value = useMemo<Ctx>(() => {
-    const nowFn = () => Date.now() + state.clockOffset * MIN;
     const hospital = (id: string) => state.hospitals.find((h) => h.id === id)!;
     const company = (id: string) => state.companies.find((c) => c.id === id)!;
     const driver = (id?: string) => state.drivers.find((d) => d.id === id);
@@ -198,9 +248,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       },
       register: (hospitalId, entry) => {
         const id = "p" + uid();
-        const at = nowFn();
-        const h = hospital(hospitalId);
-        setState((s) => ({
+        setState((s) => {
+          const at = Date.now() + s.clockOffset * MIN;
+          const h = s.hospitals.find((x) => x.id === hospitalId)!;
+          return {
           ...s,
           pilgrims: [
             {
@@ -216,9 +267,34 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             notice(at, { kind: "company", id: entry.companyId }, `${entry.name} is being treated at ${h.name}`, "info", id),
             ...s.notices,
           ],
-        }));
+          messages: [
+            { ...smsCompany(s, entry.companyId, `Rabt: your pilgrim ${entry.name} (${entry.idNumber}) is being treated at ${h.name}. We will send the expected ready time.`), id: uid(), at },
+            ...s.messages,
+          ].slice(0, 60),
+          };
+        });
         return id;
       },
+      diagnose: (pilgrimId, d) =>
+        update(
+          pilgrimId,
+          (p, s) => {
+            const at = Date.now() + s.clockOffset * MIN;
+            const ready = at + d.stayMin * MIN;
+            return {
+              condition: d.conditionId,
+              clinicalNote: d.note.trim() || conditionLabel(d.conditionId),
+              diagnosedAt: at,
+              expectedReadyAt: ready,
+              events: [...p.events, { at, label: `Diagnosis recorded. Expected ready around ${fmtTime(ready)}`, by: "Emergency doctor" }],
+            };
+          },
+          (p) => [notice(0, { kind: "company", id: p.companyId }, `${p.name} expected ready around ${fmtTime(p.expectedReadyAt!)}`, "info", p.id)],
+          (p, s) => {
+            const h = s.hospitals.find((x) => x.id === p.hospitalId)!;
+            return [smsCompany(s, p.companyId, `Rabt: ${p.name} is expected to be ready around ${fmtTime(p.expectedReadyAt!)} at ${h.name}. Plan a vehicle; we will confirm when ready.`)];
+          }
+        ),
       markReady: (pilgrimId, checklist) =>
         update(
           pilgrimId,
@@ -234,7 +310,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           },
           (p, s) => [
             notice(0, { kind: "company", id: p.companyId }, `Pickup requested for ${p.name} at ${s.hospitals.find((h) => h.id === p.hospitalId)!.name}`, "info", p.id),
-          ]
+          ],
+          (p, s) => {
+            const h = s.hospitals.find((x) => x.id === p.hospitalId)!;
+            const chair = p.checklist?.mobility === "wheelchair" ? " Needs an accessible vehicle." : "";
+            return [smsCompany(s, p.companyId, `Rabt: ${p.name} is ready for pickup at ${h.name}, recovery ward (${h.wardPhone}).${chair} Open Rabt to send a vehicle.`)];
+          }
         ),
       assignOwn: (pilgrimId, driverId) =>
         update(
@@ -250,7 +331,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
               events: [...p.events, { at, label: `Own vehicle assigned: ${d.name}`, by: c.name }],
             };
           },
-          (p) => [notice(0, { kind: "driver", id: driverId }, `New pickup: ${p.name}`, "info", p.id)]
+          (p) => [notice(0, { kind: "driver", id: driverId }, `New pickup: ${p.name}`, "info", p.id)],
+          (p, s) => [smsDriver(s, driverId, newPickupText(p, s))]
         ),
       requestRide: (pilgrimId) =>
         update(
@@ -284,7 +366,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           (p, s) => [
             notice(0, { kind: "driver", id: driverId }, `New pickup: ${p.name}`, "info", p.id),
             notice(0, { kind: "company", id: p.companyId }, `Rabt driver assigned for ${p.name}: ${s.drivers.find((d) => d.id === driverId)!.name}`, "info", p.id),
-          ]
+          ],
+          (p, s) => {
+            const d = s.drivers.find((x) => x.id === driverId)!;
+            return [smsDriver(s, driverId, newPickupText(p, s)), smsCompany(s, p.companyId, `Rabt: fleet driver ${d.name} (${d.plate}) assigned for ${p.name}.`)];
+          }
         ),
       accept: (pilgrimId, etaMin) =>
         update(
@@ -332,18 +418,77 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
               events: [...p.events, { at, label: "Arrived at accommodation", by: d.name }],
             };
           },
-          (p) => [notice(0, { kind: "company", id: p.companyId }, `${p.name} arrived at the accommodation. Case closed.`, "good", p.id)]
+          (p) => [notice(0, { kind: "company", id: p.companyId }, `${p.name} arrived at the accommodation. Case closed.`, "good", p.id)],
+          (p, s) => [smsCompany(s, p.companyId, `Rabt: ${p.name} arrived at ${p.accommodation} at ${fmtTime(p.pickup!.arrivedAt!)}. Case closed.`)]
         ),
       advanceClock: (min) => setState((s) => ({ ...s, clockOffset: s.clockOffset + min })),
       reset: () => setState(makeSeed(Date.now())),
+      setDemo: (d) => setState((s) => ({ ...s, demo: d })),
+      rewind: (pilgrimId, min) =>
+        setState((s) => {
+          const dt = min * MIN;
+          const map = new Map<string, string>();
+          const sh = (t?: number) => {
+            if (t == null) return t;
+            map.set(fmtTime(t), fmtTime(t - dt));
+            return t - dt;
+          };
+          const target = s.pilgrims.find((p) => p.id === pilgrimId);
+          if (!target) return s;
+          const pilgrims = s.pilgrims.map((p) =>
+            p.id !== pilgrimId
+              ? p
+              : {
+                  ...p,
+                  admittedAt: sh(p.admittedAt)!,
+                  diagnosedAt: sh(p.diagnosedAt),
+                  expectedReadyAt: sh(p.expectedReadyAt),
+                  events: p.events.map((e) => ({ ...e, at: sh(e.at)! })),
+                  pickup: p.pickup && {
+                    ...p.pickup,
+                    requestedAt: sh(p.pickup.requestedAt)!,
+                    assignedAt: sh(p.pickup.assignedAt),
+                    acceptedAt: sh(p.pickup.acceptedAt),
+                    eta: sh(p.pickup.eta),
+                    pickedUpAt: sh(p.pickup.pickedUpAt),
+                    arrivedAt: sh(p.pickup.arrivedAt),
+                  },
+                }
+          );
+          const fix = (txt: string) => txt.replace(/\b\d\d:\d\d\b/g, (x) => map.get(x) ?? x);
+          return {
+            ...s,
+            pilgrims: pilgrims.map((p) => (p.id !== pilgrimId ? p : { ...p, events: p.events.map((e) => ({ ...e, label: fix(e.label) })) })),
+            notices: s.notices.map((n) => (n.pilgrimId === pilgrimId ? { ...n, at: n.at - dt, text: fix(n.text) } : n)),
+            messages: s.messages.map((m) => (m.text.includes(target.name) ? { ...m, at: m.at - dt, text: fix(m.text) } : m)),
+          };
+        }),
+      syncMode,
     };
-  }, [state, now, update]);
+  }, [state, now, update, syncMode]);
 
   return <StoreCtx.Provider value={value}>{children}</StoreCtx.Provider>;
 }
 
 function notice(at: number, audience: Notice["audience"], text: string, tone: Notice["tone"], pilgrimId?: string): Notice {
   return { id: uid(), at, audience, text, tone, pilgrimId };
+}
+
+type SmsDraft = Omit<Sms, "id" | "at">;
+
+function smsCompany(s: State, companyId: string, text: string): SmsDraft {
+  const c = s.companies.find((x) => x.id === companyId)!;
+  return { to: { kind: "company", id: companyId }, name: `${c.manager}, ${c.name}`, phone: c.managerPhone, text };
+}
+
+function smsDriver(s: State, driverId: string, text: string): SmsDraft {
+  const d = s.drivers.find((x) => x.id === driverId)!;
+  return { to: { kind: "driver", id: driverId }, name: d.name, phone: d.phone, text };
+}
+
+function newPickupText(p: Pilgrim, s: State) {
+  const h = s.hospitals.find((x) => x.id === p.hospitalId)!;
+  return `Rabt: new pickup. ${p.name} at ${h.name}, recovery ward, to ${p.accommodation}. Open the driver app to accept.`;
 }
 
 function short(name: string) {

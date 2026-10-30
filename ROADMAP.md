@@ -14,14 +14,22 @@ Size: **S** = an evening, **M** = 2–4 days, **L** = a week or more.
 - Late alerts, a demo clock (+5 / +15 min), and live sync between tabs **in the same browser**.
 - Travel-time estimate (`src/eta.ts`): a built-in estimate from coordinates, shown when
   assigning a driver, in dispatch, in the driver app and on the ward board (`~03:04`).
+- Diagnosis with an expected ready time (Rabt suggests a typical stay); the company sees
+  only the time (`src/stay.ts`).
+- **Demo mode**: the full journey in 10 steps with captions, Play / Next / Follow.
+- Simulated SMS to company managers and drivers (Messages panel and pop-up).
+- **Sync across devices** on the published link (`src/sync.ts`).
+
+Decided: no outside APIs for the competition. Travel time and stay are estimated in the app;
+SMS are simulated.
 
 ## 1. For the demo (do first)
 
 | # | Task | Size | Why it matters |
 |---|---|---|---|
-| 1 | **Sync across devices.** Move the store to Supabase or Firebase realtime (see README, "Connecting a real backend"). | M | Today a phone and a laptop don't see each other's changes. For the demo, the driver taps on a real phone and the ward board on the screen updates. |
-| 2 | **Put it online.** Deploy to Vercel or Netlify from this repo. | S | One link for judges and the team. |
-| 3 | **Guided demo.** A "Play scenario" button that walks one pilgrim from ready to home in about 90 seconds, with a caption at each step. | M | A short, reliable story if live tapping goes wrong. |
+| 1 | ~~Sync across devices~~ Done on the published link. Only needed again if the app moves off claude.ai (then Supabase or Firebase). | – | |
+| 2 | ~~Guided demo~~ Done (demo mode). Next: rehearse it, tune captions, record a backup video of it. | S | |
+| 3 | **Impact page**: ward-crowding simulator (patients per hour, company response time today vs. with Rabt), labelled as illustrative. | M | Shows the Track 1 crowd-flow result, not just screens. |
 | 4 | **Arabic interface.** RTL layout and Arabic text, starting with the ward board and the driver app. | M | Most real users work in Arabic. |
 | 5 | **Visual pass.** The team's own edits to the look. Design rules are in the README. | S–M | |
 

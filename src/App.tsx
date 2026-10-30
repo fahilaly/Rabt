@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
-import { LuBell, LuRotateCcw } from "react-icons/lu";
+import { LuBell, LuRotateCcw, LuPlay, LuMessageSquare } from "react-icons/lu";
 import { fmtTime, isLate, useStore, WAITING } from "./store";
 import { NoticeList } from "./ui";
 import HospitalPortal from "./HospitalPortal";
 import CompanyPortal from "./CompanyPortal";
 import TransportPortal from "./TransportPortal";
+import { DemoBar, SmsPanel, SmsToast, smsFor, startDemo, type View } from "./Demo";
 
 type Portal = "hospital" | "company" | "transport";
 type HTab = "ward" | "patients" | "register";
@@ -38,11 +39,15 @@ function loadPrefs(): Prefs {
 }
 
 export default function App() {
-  const { state, now, advanceClock, reset } = useStore();
+  const store = useStore();
+  const { state, now, advanceClock, reset, syncMode } = store;
   const [prefs, setPrefs] = useState<Prefs>(loadPrefs);
   const [openId, setOpenId] = useState<string | null>(null);
   const [bellOpen, setBellOpen] = useState(false);
   const [seen, setSeen] = useState<Record<string, number>>({});
+  const [follow, setFollow] = useState(true);
+  const [smsOpen, setSmsOpen] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
     try {
@@ -57,6 +62,50 @@ export default function App() {
     setOpenId(null);
     setBellOpen(false);
   };
+
+  // demo mode moves the screen to each step's view
+  const nav = (v: View) => {
+    setPrefs((x) => ({
+      ...x,
+      portal: v.portal,
+      ...(v.htab ? { htab: v.htab } : {}),
+      ...(v.ctab ? { ctab: v.ctab } : {}),
+      ...(v.ttab ? { ttab: v.ttab } : {}),
+      ...(v.hospitalId ? { hospitalId: v.hospitalId } : {}),
+      ...(v.companyId ? { companyId: v.companyId } : {}),
+      ...(v.driverId ? { driverId: v.driverId } : {}),
+    }));
+    setOpenId(v.openId ?? null);
+    setBellOpen(false);
+  };
+  const demoOn = !!state.demo?.active;
+
+  // simulated SMS for whoever this screen belongs to
+  const smsWho =
+    demoOn || prefs.portal === "hospital" || (prefs.portal === "transport" && prefs.ttab === "dispatch")
+      ? null
+      : prefs.portal === "company"
+        ? { kind: "company" as const, id: prefs.companyId }
+        : { kind: "driver" as const, id: prefs.driverId };
+  const sms = smsFor(state.messages ?? [], smsWho);
+  const smsTitle = smsWho
+    ? smsWho.kind === "company"
+      ? `${store.company(smsWho.id).manager}'s phone`
+      : `${store.driver(smsWho.id)?.name ?? "Driver"}'s phone`
+    : "SMS sent by Rabt";
+  const latestSms = sms[0];
+  const lastSmsId = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    const id = latestSms?.id;
+    if (lastSmsId.current !== undefined && id && id !== lastSmsId.current && !smsOpen) {
+      setToast(id);
+      const t = setTimeout(() => setToast(null), 6000);
+      lastSmsId.current = id;
+      return () => clearTimeout(t);
+    }
+    lastSmsId.current = id ?? "";
+  }, [latestSms?.id, smsOpen]);
+  const toastMsg = toast ? sms.find((m) => m.id === toast) : undefined;
 
   // Keys 1, 2, 3 switch role (handy when presenting). Ignored while typing.
   useEffect(() => {
@@ -221,6 +270,15 @@ export default function App() {
         </nav>
 
         <div className="side-foot">
+          {!demoOn && (
+            <button className="btn primary demo-start" onClick={() => startDemo(store)}>
+              <LuPlay aria-hidden="true" /> Start demo
+            </button>
+          )}
+          <button className={`btn sm sms-btn ${smsOpen ? "on" : ""}`} onClick={() => setSmsOpen(!smsOpen)} aria-expanded={smsOpen}>
+            <LuMessageSquare aria-hidden="true" /> Messages
+            {sms.length > 0 && <span className="mono dim">{sms.length}</span>}
+          </button>
           <div className="clock">
             <span className="label">Demo clock</span>
             <span className="mono clock-time">{fmtTime(now)}</span>
@@ -244,19 +302,25 @@ export default function App() {
               <LuRotateCcw />
             </button>
           </div>
-          <p className="dim small">Prototype with sample data. Open a second tab to see changes sync.</p>
+          <p className="dim small">
+            <span className={`sync-dot ${syncMode}`} aria-hidden="true" />
+            {syncMode === "shared" ? "Synced: open this link on another device to see the same data." : "Sample data. Syncs between tabs in this browser."}
+          </p>
         </div>
 
         {bellOpen && <Inbox onClose={() => setBellOpen(false)}>{<NoticeList items={mine.slice(0, 14)} onOpen={openFromNotice} />}</Inbox>}
       </aside>
 
-      <main className={`content ${prefs.portal === "hospital" && prefs.htab === "ward" ? "content-board" : ""}`}>
+      <main className={`content ${prefs.portal === "hospital" && prefs.htab === "ward" ? "content-board" : ""} ${demoOn ? "with-demo" : ""}`}>
         {prefs.portal === "hospital" && (
           <HospitalPortal hospitalId={prefs.hospitalId} tab={prefs.htab} setTab={(t) => set({ htab: t })} openId={openId} setOpenId={setOpenId} />
         )}
         {prefs.portal === "company" && <CompanyPortal companyId={prefs.companyId} tab={prefs.ctab} openId={openId} setOpenId={setOpenId} />}
         {prefs.portal === "transport" && <TransportPortal tab={prefs.ttab} driverId={prefs.driverId} />}
       </main>
+      {smsOpen && <SmsPanel messages={sms} title={smsTitle} onClose={() => setSmsOpen(false)} />}
+      {!smsOpen && toastMsg && <SmsToast m={toastMsg} onOpen={() => { setToast(null); setSmsOpen(true); }} />}
+      <DemoBar nav={nav} follow={follow} setFollow={setFollow} />
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { LuSearch, LuMaximize2, LuMinimize2, LuAccessibility } from "react-icons
 import type { DirectoryEntry, Mobility, Pilgrim } from "./types";
 import { WAITING, fmtDuration, fmtTime, isLate, minutes, useStore } from "./store";
 import { Drawer, EmptyRow, Field, Modal, PageHeader, StatusText, Steps, Timeline } from "./ui";
+import { CONDITIONS, STAY_CHOICES, conditionLabel, suggestedStay } from "./stay";
 
 type Tab = "ward" | "patients" | "register";
 
@@ -260,7 +261,8 @@ function Patients({ list, onOpen }: { list: Pilgrim[]; onOpen: (id: string) => v
 }
 
 function sinceCell(p: Pilgrim, now: number) {
-  if (p.status === "in_treatment") return `${fmtTime(p.admittedAt)} (${fmtDuration(minutes(now - p.admittedAt))})`;
+  if (p.status === "in_treatment")
+    return `${fmtTime(p.admittedAt)} (${fmtDuration(minutes(now - p.admittedAt))})${p.expectedReadyAt ? ` · ready ~${fmtTime(p.expectedReadyAt)}` : ""}`;
   if (WAITING.includes(p.status)) return `${fmtTime(p.pickup!.requestedAt)} (${minutes(now - p.pickup!.requestedAt)} min)`;
   if (p.pickup?.pickedUpAt) return `left ${fmtTime(p.pickup.pickedUpAt)}`;
   return "";
@@ -271,6 +273,7 @@ function sinceCell(p: Pilgrim, now: number) {
 function PatientDrawer({ p, onClose }: { p: Pilgrim | null; onClose: () => void }) {
   const { company, driver, now, hospital } = useStore();
   const [readyOpen, setReadyOpen] = useState(false);
+  const [dxOpen, setDxOpen] = useState(false);
   if (!p) return null;
   const c = company(p.companyId);
   const d = driver(p.pickup?.driverId);
@@ -278,12 +281,33 @@ function PatientDrawer({ p, onClose }: { p: Pilgrim | null; onClose: () => void 
 
   return (
     <Drawer open={!!p} onClose={onClose} title={p.name} sub={<StatusText p={p} now={now} />}>
-      {p.status === "in_treatment" && (
+      {p.status === "in_treatment" && !p.diagnosedAt && (
         <div className="d-sec">
-          <button className="btn primary" onClick={() => setReadyOpen(true)}>
-            Ready for transport
-          </button>
-          <p className="dim small">Sends a pickup request to {c.name}.</p>
+          <div className="row-actions">
+            <button className="btn primary" onClick={() => setDxOpen(true)}>
+              Record diagnosis
+            </button>
+            <button className="btn" onClick={() => setReadyOpen(true)}>
+              Ready for transport
+            </button>
+          </div>
+          <p className="dim small">The diagnosis stays in the hospital. {c.name} is told only the expected ready time.</p>
+        </div>
+      )}
+      {p.status === "in_treatment" && p.diagnosedAt && (
+        <div className="d-sec">
+          <p className="note">
+            Expected ready around <span className="mono">{fmtTime(p.expectedReadyAt!)}</span>
+            {now > p.expectedReadyAt! ? `, ${fmtDuration(minutes(now - p.expectedReadyAt!))} ago` : `, in ${fmtDuration(minutes(p.expectedReadyAt! - now))}`}. Shared with {c.name}.
+          </p>
+          <div className="row-actions">
+            <button className="btn primary" onClick={() => setReadyOpen(true)}>
+              Ready for transport
+            </button>
+            <button className="btn" onClick={() => setDxOpen(true)}>
+              Change estimate
+            </button>
+          </div>
         </div>
       )}
       {p.status !== "in_treatment" && (
@@ -326,6 +350,7 @@ function PatientDrawer({ p, onClose }: { p: Pilgrim | null; onClose: () => void 
           )}
           <dt>Clinical note</dt>
           <dd>
+            {p.condition ? `${conditionLabel(p.condition)}: ` : ""}
             {p.clinicalNote} <span className="dim">(hospital only)</span>
           </dd>
         </dl>
@@ -335,7 +360,65 @@ function PatientDrawer({ p, onClose }: { p: Pilgrim | null; onClose: () => void 
         <Timeline p={p} />
       </div>
       <ReadyModal p={p} open={readyOpen} onClose={() => setReadyOpen(false)} />
+      <DiagnoseModal key={p.id + String(dxOpen)} p={p} open={dxOpen} onClose={() => setDxOpen(false)} />
     </Drawer>
+  );
+}
+
+function DiagnoseModal({ p, open, onClose }: { p: Pilgrim; open: boolean; onClose: () => void }) {
+  const { diagnose, company } = useStore();
+  const [cond, setCond] = useState(p.condition ?? "");
+  const [note, setNote] = useState(p.diagnosedAt ? p.clinicalNote : "");
+  const [stay, setStay] = useState<number | null>(null);
+  const suggestion = cond ? suggestedStay(cond) : null;
+  const chosen = stay ?? suggestion;
+  const c = company(p.companyId);
+
+  return (
+    <Modal open={open} onClose={onClose} title={`Diagnosis for ${p.name}`}>
+      <fieldset className="radios">
+        <legend className="label">Condition group</legend>
+        {CONDITIONS.map((x) => (
+          <label key={x.id} className="radio">
+            <input id={`cond-${x.id}`} type="radio" name="cond" checked={cond === x.id} onChange={() => { setCond(x.id); setStay(null); }} />
+            <span>{x.label}</span>
+          </label>
+        ))}
+      </fieldset>
+      <Field label="Clinical note (optional, hospital only)" htmlFor="dx-note">
+        <input id="dx-note" className="input" value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. IV fluids, observe 2 h" />
+      </Field>
+      <fieldset className="radios inline">
+        <legend className="label">Expected ready in</legend>
+        {STAY_CHOICES.map((m) => (
+          <label key={m} className="radio">
+            <input id={`stay-${m}`} type="radio" name="stay" checked={chosen === m} onChange={() => setStay(m)} />
+            <span>{fmtDuration(m)}</span>
+          </label>
+        ))}
+      </fieldset>
+      {suggestion && (
+        <p className="dim small">
+          Rabt suggests {fmtDuration(suggestion)}, typical for {conditionLabel(cond).toLowerCase()} (sample figures).
+        </p>
+      )}
+      <p className="dim small">{c.name} receives the expected ready time only, never the diagnosis.</p>
+      <div className="modal-actions">
+        <button className="btn" onClick={onClose}>
+          Cancel
+        </button>
+        <button
+          className="btn primary"
+          disabled={!cond || !chosen}
+          onClick={() => {
+            diagnose(p.id, { conditionId: cond, note, stayMin: chosen! });
+            onClose();
+          }}
+        >
+          Save and tell {c.name}
+        </button>
+      </div>
+    </Modal>
   );
 }
 

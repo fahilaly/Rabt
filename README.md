@@ -1,4 +1,4 @@
-# Rabt Console (prototype v2)
+# Rabt Console (prototype v3)
 
 Rabt connects Hajj and Umrah hospitals with the company responsible for each pilgrim:
 the hospital confirms a pilgrim is ready for transport, the company sends a vehicle
@@ -17,6 +17,28 @@ npm run dev        # http://localhost:5173
 
 Open two tabs (one as **Hospital**, one as **Company**, using the switch at the top of the
 sidebar) to watch changes appear in both. Keys **1**, **2** and **3** also switch role.
+
+## Demo mode
+
+Press **Start demo** in the sidebar. It plays one pilgrim's journey on the real app, ten steps
+with a caption each:
+
+1. Arrives at emergency (registered by booking number) → 2. company told by SMS →
+3. diagnosis and expected stay (Rabt suggests a typical stay) → 4. company sees the expected
+ready time only → 5. nurse marks Ready for transport → 6. nearest company vehicle assigned →
+7. driver accepts with an arrival time → 8. vehicle runs late, alert sent → 9. picked up → 10. home.
+
+**Next** runs one step, **Play** runs them every 9 seconds, **Follow** makes the screen jump to
+each step's view (turn it off on a device that should stay on one role). The demo resets the
+sample data when it starts, and moves only the demo pilgrim's times, so other patients stay realistic.
+
+**Messages** shows the SMS Rabt would send (simulated; nothing is sent).
+
+## Two devices
+
+On the published claude.ai link, every device that opens it (signed in to the same account or
+organization) shares one copy of the data, so a phone can be the driver while a laptop shows the
+ward board. Code: `src/sync.ts`. Under `npm run dev` it syncs between tabs of one browser only.
 
 ## The three portals
 
@@ -48,6 +70,9 @@ in_treatment → ready → (ride_requested) → assigned → accepted → picked
 | `src/seed.ts` | Sample data (all names invented) |
 | `src/store.tsx` | State, actions, late detection, browser storage, tab sync |
 | `src/eta.ts` | Travel-time estimate (built-in now; Google Routes or OSRM examples for later) |
+| `src/stay.ts` | Expected-stay suggestions by condition group (sample figures) |
+| `src/Demo.tsx` | Demo mode steps and player, simulated SMS panel |
+| `src/sync.ts` | Shared data across devices on the published link |
 | `src/HospitalPortal.tsx` | Ward board, patient list and drawer, ready checklist, register |
 | `src/CompanyPortal.tsx` | Pickup requests, assign vehicle, my pilgrims, history |
 | `src/TransportPortal.tsx` | Driver app, fleet dispatch |
@@ -88,7 +113,7 @@ All writes go through the action functions in `src/store.tsx`
 
 - Companies and drivers never see the diagnosis or clinical notes (`clinicalNote` is shown
   only in the hospital portal, labelled "Hospital only").
-- Companies see: name, ID, hospital, stage, expected pickup time, mobility.
+- Companies see: name, ID, hospital, stage, expected ready time, expected pickup time, mobility.
 - Every change is recorded on the pilgrim's timeline with who did it and when.
 
 ## What's left

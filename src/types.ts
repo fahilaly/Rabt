@@ -18,6 +18,7 @@ export interface Company {
   type: CompanyType;
   plan: Plan; // basic = own vehicles only, full = can request a Rabt ride
   manager: string;
+  managerPhone: string;
 }
 
 export interface Driver {
@@ -26,6 +27,7 @@ export interface Driver {
   vehicle: string;
   plate: string;
   wheelchair: boolean;
+  phone: string;
   // a company's own driver, or null for the licensed fleet partner
   companyId: string | null;
   // last known position (a live version gets this from the driver's phone GPS)
@@ -88,6 +90,29 @@ export interface Pilgrim {
   events: TimelineEvent[];
   // Kept inside the hospital only. Never shown to companies or drivers.
   clinicalNote: string;
+  condition?: string; // condition group picked at diagnosis (hospital only)
+  diagnosedAt?: number;
+  // Expected time the pilgrim will be ready to leave. Shared with the company
+  // so it can plan a vehicle; the diagnosis itself is not shared.
+  expectedReadyAt?: number;
+}
+
+// A simulated SMS (the prototype shows it on a phone panel; nothing is sent).
+export interface Sms {
+  id: string;
+  at: number;
+  to: { kind: "company" | "driver"; id: string };
+  name: string;
+  phone: string;
+  text: string;
+}
+
+// Shared demo-mode state, so every open device sees the same step.
+export interface DemoState {
+  active: boolean;
+  step: number;
+  pilgrimId?: string;
+  driverId?: string;
 }
 
 export interface Notice {
@@ -107,6 +132,8 @@ export interface State {
   drivers: Driver[];
   pilgrims: Pilgrim[];
   notices: Notice[];
+  messages: Sms[];
+  demo?: DemoState;
   directory: DirectoryEntry[]; // mock Nusuk / booking lookup
 }
 

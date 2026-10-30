@@ -13,13 +13,13 @@ export function makeSeed(now: number): State {
     {
       id: "p1", name: "Siti Rahmawati", nationality: "Indonesia", age: 64, idType: "booking", idNumber: "UMR-58213",
       companyId: "c1", hospitalId: "h1", accommodation: "Ibrahim Al-Khalil St, Tower B, room 1412",
-      admittedAt: ago(190), status: "in_treatment", clinicalNote: "Dehydration, IV fluids",
+      admittedAt: ago(190), status: "in_treatment", clinicalNote: "Dehydration, IV fluids", condition: "dehydration", diagnosedAt: ago(170), expectedReadyAt: ago(-20),
       events: [ev(190, "Registered at emergency", "Desk, Al-Haram East")],
     },
     {
       id: "p2", name: "Muhammad Aslam", nationality: "Pakistan", age: 71, idType: "nusuk", idNumber: "NSK-3390417",
       companyId: "c2", hospitalId: "h2", accommodation: "Aziziyah, Building 22, room 305",
-      admittedAt: ago(1440), status: "in_treatment", clinicalNote: "Chest pain, under observation",
+      admittedAt: ago(1440), status: "in_treatment", clinicalNote: "Chest pain, under observation", condition: "chest", diagnosedAt: ago(1400), expectedReadyAt: ago(-240),
       events: [ev(1440, "Registered at emergency", "Desk, Mina Valley"), ev(1400, "Admitted to ward", "Ward 3, Mina Valley")],
     },
     {
@@ -101,7 +101,7 @@ export function makeSeed(now: number): State {
   ];
 
   return {
-    version: 2,
+    version: 3,
     clockOffset: 0,
     hospitals: [
       { id: "h1", name: "Al-Haram East Hospital", area: "Central Makkah", wardPhone: "012 000 1101", lat: 21.4241, lng: 39.8302 },
@@ -109,17 +109,17 @@ export function makeSeed(now: number): State {
       { id: "h3", name: "Aziziyah Medical Center", area: "Aziziyah", wardPhone: "012 000 3303", lat: 21.4062, lng: 39.8571 },
     ],
     companies: [
-      { id: "c1", name: "Al-Safwa Umrah", type: "umrah", plan: "full", manager: "Rakan Al-Dosari" },
-      { id: "c2", name: "Rawasi Hajj Campaign", type: "hajj", plan: "basic", manager: "Omar Al-Ghamdi" },
-      { id: "c3", name: "Noor Al-Huda Tours", type: "umrah", plan: "full", manager: "Hind Al-Subaie" },
+      { id: "c1", name: "Al-Safwa Umrah", type: "umrah", plan: "full", manager: "Rakan Al-Dosari", managerPhone: "050 000 2101" },
+      { id: "c2", name: "Rawasi Hajj Campaign", type: "hajj", plan: "basic", manager: "Omar Al-Ghamdi", managerPhone: "050 000 2102" },
+      { id: "c3", name: "Noor Al-Huda Tours", type: "umrah", plan: "full", manager: "Hind Al-Subaie", managerPhone: "050 000 2103" },
     ],
     drivers: [
-      { id: "d1", name: "Saeed Al-Malki", vehicle: "Toyota HiAce", plate: "KSA 4821", wheelchair: false, companyId: "c1", at: "Ibrahim Al-Khalil St", lat: 21.4172, lng: 39.8231 },
-      { id: "d2", name: "Turki Al-Shehri", vehicle: "Hyundai H-1", plate: "KSA 7730", wheelchair: true, companyId: "c1", at: "Ajyad", lat: 21.4186, lng: 39.8268 },
-      { id: "d3", name: "Khalid Al-Harbi", vehicle: "Toyota Coaster", plate: "KSA 1195", wheelchair: false, companyId: "c2", at: "Mina, Camp 38", lat: 21.4151, lng: 39.8879 },
-      { id: "d4", name: "Nasser Al-Zahrani", vehicle: "Ford Transit (accessible)", plate: "KSA 3307", wheelchair: true, companyId: null, at: "Aziziyah", lat: 21.4041, lng: 39.8603 },
-      { id: "d5", name: "Majed Al-Otaibi", vehicle: "Toyota HiAce", plate: "KSA 5562", wheelchair: false, companyId: null, at: "Al-Awali", lat: 21.3802, lng: 39.8652 },
-      { id: "d6", name: "Faisal Al-Juhani", vehicle: "Hyundai Staria", plate: "KSA 9024", wheelchair: false, companyId: null, at: "Al-Shisha", lat: 21.4349, lng: 39.8449 },
+      { id: "d1", name: "Saeed Al-Malki", vehicle: "Toyota HiAce", plate: "KSA 4821", wheelchair: false, phone: "055 000 3101", companyId: "c1", at: "Ibrahim Al-Khalil St", lat: 21.4172, lng: 39.8231 },
+      { id: "d2", name: "Turki Al-Shehri", vehicle: "Hyundai H-1", plate: "KSA 7730", wheelchair: true, phone: "055 000 3102", companyId: "c1", at: "Ajyad", lat: 21.4186, lng: 39.8268 },
+      { id: "d3", name: "Khalid Al-Harbi", vehicle: "Toyota Coaster", plate: "KSA 1195", wheelchair: false, phone: "055 000 3103", companyId: "c2", at: "Mina, Camp 38", lat: 21.4151, lng: 39.8879 },
+      { id: "d4", name: "Nasser Al-Zahrani", vehicle: "Ford Transit (accessible)", plate: "KSA 3307", wheelchair: true, phone: "055 000 3104", companyId: null, at: "Aziziyah", lat: 21.4041, lng: 39.8603 },
+      { id: "d5", name: "Majed Al-Otaibi", vehicle: "Toyota HiAce", plate: "KSA 5562", wheelchair: false, phone: "055 000 3105", companyId: null, at: "Al-Awali", lat: 21.3802, lng: 39.8652 },
+      { id: "d6", name: "Faisal Al-Juhani", vehicle: "Hyundai Staria", plate: "KSA 9024", wheelchair: false, phone: "055 000 3106", companyId: null, at: "Al-Shisha", lat: 21.4349, lng: 39.8449 },
     ],
     pilgrims,
     notices: [
@@ -127,6 +127,7 @@ export function makeSeed(now: number): State {
       { id: "n2", at: ago(6), audience: { kind: "company", id: "c3" }, text: "Vehicle late for Ali Reza Karimi: arrival time passed", tone: "warn", pilgrimId: "p9" },
       { id: "n3", at: ago(7), audience: { kind: "dispatch", id: "fleet" }, text: "New Rabt ride request: Fatima Zahra Idrissi at Aziziyah Medical Center", tone: "info", pilgrimId: "p6" },
     ],
+    messages: [],
     directory: [
       { idType: "nusuk", idNumber: "NSK-3401556", name: "Saleh Al-Mutairi", nationality: "Saudi Arabia", age: 68, companyId: "c2", accommodation: "Mina, Camp 41, tent 7" },
       { idType: "booking", idNumber: "UMR-63118", name: "Ahmad Fauzi", nationality: "Indonesia", age: 59, companyId: "c1", accommodation: "Ibrahim Al-Khalil St, Tower A, room 1702" },
