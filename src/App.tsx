@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { LuBell, LuRotateCcw, LuPlay, LuMessageSquare } from "react-icons/lu";
+import { LuBell, LuRotateCcw, LuPlay, LuMessageSquare, LuMenu, LuX } from "react-icons/lu";
 import { fmtTime, isLate, useStore, WAITING } from "./store";
 import { NoticeList } from "./ui";
 import HospitalPortal from "./HospitalPortal";
@@ -50,6 +50,7 @@ export default function App() {
   const [follow, setFollow] = useState(true);
   const [smsOpen, setSmsOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     try {
@@ -64,6 +65,20 @@ export default function App() {
     setOpenId(null);
     setBellOpen(false);
   };
+
+  // choosing a section also closes the phone menu
+  const go = (p: Partial<Prefs>) => {
+    set(p);
+    setMenuOpen(false);
+  };
+  const sectionLabel = t(
+    prefs.portal === "hospital"
+      ? { ward: "Recovery ward", patients: "Patients", register: "Register pilgrim" }[prefs.htab]
+      : prefs.portal === "company"
+        ? { requests: "Pickup requests", pilgrims: "Pilgrims in hospital", history: "Completed" }[prefs.ctab]
+        : { driver: "Driver app", dispatch: "Fleet dispatch" }[prefs.ttab]
+  );
+  const roleLabel = t(prefs.portal === "hospital" ? "Hospital" : prefs.portal === "company" ? "Company" : "Transport");
 
   // demo mode moves the screen to each step's view
   const nav = (v: View) => {
@@ -101,7 +116,8 @@ export default function App() {
     const id = latestSms?.id;
     if (lastSmsId.current !== undefined && id && id !== lastSmsId.current && !smsOpen) {
       setToast(id);
-      const t = setTimeout(() => setToast(null), 6000);
+      const narrow = typeof window !== "undefined" && window.innerWidth <= 860;
+      const t = setTimeout(() => setToast(null), narrow ? 4000 : 6000);
       lastSmsId.current = id;
       return () => clearTimeout(t);
     }
@@ -195,12 +211,15 @@ export default function App() {
 
   return (
     <div className="shell">
-      <aside className="side">
+      <aside className={`side ${menuOpen ? "open" : ""}`}>
         <div className="side-top">
           <div className="wordmark">
             <span className="wm">{t("Rabt")}</span>
             <span className="wm-sub">{t("Pilgrim pickup from hospital")}</span>
           </div>
+          <span className="side-current">
+            {roleLabel} · <b>{sectionLabel}</b>
+          </span>
           <button
             className={`icon-btn bell ${bellOpen ? "on" : ""}`}
             aria-label={unread ? t("Notifications, {n} new", { n: unread }) : t("Notifications")}
@@ -213,7 +232,11 @@ export default function App() {
             <LuBell />
             {unread > 0 && <span className="dot mono">{unread}</span>}
           </button>
+          <button className="icon-btn menu-btn" aria-expanded={menuOpen} aria-controls="side-panel" aria-label={menuOpen ? t("Close menu") : t("Menu")} onClick={() => setMenuOpen(!menuOpen)}>
+            {menuOpen ? <LuX /> : <LuMenu />}
+          </button>
         </div>
+        <div className="side-panel" id="side-panel">
 
         <div className="role-switch" role="tablist" aria-label={t("Role")}>
           {ROLES.map(([r, label, key]) => (
@@ -234,36 +257,36 @@ export default function App() {
         <nav className="side-nav" aria-label={t("Sections")}>
           {prefs.portal === "hospital" && (
             <>
-              <NavItem on={prefs.htab === "ward"} onClick={() => set({ htab: "ward" })} count={wardCount} alert={wardLate}>
+              <NavItem on={prefs.htab === "ward"} onClick={() => go({ htab: "ward" })} count={wardCount} alert={wardLate}>
                 {t("Recovery ward")}
               </NavItem>
-              <NavItem on={prefs.htab === "patients"} onClick={() => set({ htab: "patients" })} count={treat}>
+              <NavItem on={prefs.htab === "patients"} onClick={() => go({ htab: "patients" })} count={treat}>
                 {t("Patients")}
               </NavItem>
-              <NavItem on={prefs.htab === "register"} onClick={() => set({ htab: "register" })}>
+              <NavItem on={prefs.htab === "register"} onClick={() => go({ htab: "register" })}>
                 {t("Register pilgrim")}
               </NavItem>
             </>
           )}
           {prefs.portal === "company" && (
             <>
-              <NavItem on={prefs.ctab === "requests"} onClick={() => set({ ctab: "requests" })} count={needs} alert={needs > 0}>
+              <NavItem on={prefs.ctab === "requests"} onClick={() => go({ ctab: "requests" })} count={needs} alert={needs > 0}>
                 {t("Pickup requests")}
               </NavItem>
-              <NavItem on={prefs.ctab === "pilgrims"} onClick={() => set({ ctab: "pilgrims" })} count={compActive}>
+              <NavItem on={prefs.ctab === "pilgrims"} onClick={() => go({ ctab: "pilgrims" })} count={compActive}>
                 {t("Pilgrims in hospital")}
               </NavItem>
-              <NavItem on={prefs.ctab === "history"} onClick={() => set({ ctab: "history" })}>
+              <NavItem on={prefs.ctab === "history"} onClick={() => go({ ctab: "history" })}>
                 {t("Completed")}
               </NavItem>
             </>
           )}
           {prefs.portal === "transport" && (
             <>
-              <NavItem on={prefs.ttab === "driver"} onClick={() => set({ ttab: "driver" })} count={driverJobs}>
+              <NavItem on={prefs.ttab === "driver"} onClick={() => go({ ttab: "driver" })} count={driverJobs}>
                 {t("Driver app")}
               </NavItem>
-              <NavItem on={prefs.ttab === "dispatch"} onClick={() => set({ ttab: "dispatch" })} count={openRides} alert={openRides > 0}>
+              <NavItem on={prefs.ttab === "dispatch"} onClick={() => go({ ttab: "dispatch" })} count={openRides} alert={openRides > 0}>
                 {t("Fleet dispatch")}
               </NavItem>
             </>
@@ -272,11 +295,11 @@ export default function App() {
 
         <div className="side-foot">
           {!demoOn && (
-            <button className="btn primary demo-start" onClick={() => startDemo(store)}>
+            <button className="btn primary demo-start" onClick={() => { setMenuOpen(false); startDemo(store); }}>
               <LuPlay aria-hidden="true" /> {t("Start demo")}
             </button>
           )}
-          <button className={`btn sm sms-btn ${smsOpen ? "on" : ""}`} onClick={() => setSmsOpen(!smsOpen)} aria-expanded={smsOpen}>
+          <button className={`btn sm sms-btn ${smsOpen ? "on" : ""}`} onClick={() => { setSmsOpen(!smsOpen); setMenuOpen(false); }} aria-expanded={smsOpen}>
             <LuMessageSquare aria-hidden="true" /> {t("Messages")}
             {sms.length > 0 && <span className="mono dim">{sms.length}</span>}
           </button>
@@ -312,6 +335,7 @@ export default function App() {
           </button>
         </div>
 
+        </div>
         {bellOpen && <Inbox onClose={() => setBellOpen(false)}>{<NoticeList items={mine.slice(0, 14)} onOpen={openFromNotice} />}</Inbox>}
       </aside>
 

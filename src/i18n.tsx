@@ -301,6 +301,8 @@ const AR: Record<string, string> = {
     "عاد أحمد إلى فندقه. سُجّل وقت كل خطوة، ومنها مدة انتظاره في القسم، وتغذي هذه الأوقات التقارير وتقديرات الوقت.",
   "The driver": "السائق",
   "Assessment in progress": "قيد التقييم",
+  Menu: "القائمة",
+  "Close menu": "إغلاق القائمة",
 };
 
 // Sentences the store saves in English (notices, timeline, SMS). tr() matches these.

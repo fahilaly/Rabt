@@ -182,6 +182,7 @@ export function DemoBar({ nav, follow, setFollow }: { nav: (v: View) => void; fo
   apiRef.current = api;
   const d = api.state.demo;
   const [playing, setPlaying] = useState(false);
+  const [more, setMore] = useState(false);
 
   // follow the shared step on every device
   const stepKey = d?.active ? `${d.step}:${d.pilgrimId ?? ""}:${d.driverId ?? ""}` : "";
@@ -229,7 +230,9 @@ export function DemoBar({ nav, follow, setFollow }: { nav: (v: View) => void; fo
             <span className="demo-where">{t(step.where)}</span>
             <b>{t(step.title)}</b>
           </div>
-          <p className="demo-caption">{step.caption(api, d, t)}</p>
+          <button type="button" className={`demo-caption ${more ? "open" : ""}`} aria-expanded={more} onClick={() => setMore(!more)}>
+            {step.caption(api, d, t)}
+          </button>
         </div>
         <div className="demo-actions">
           <label className="demo-follow">
