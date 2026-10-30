@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { LuAccessibility } from "react-icons/lu";
 import type { Pilgrim } from "./types";
-import { WAITING, fmtDuration, fmtTime, isLate, minutes, useStore } from "./store";
+import { WAITING, fmtTime, isLate, minutes, useStore } from "./store";
+import { useT, type T } from "./i18n";
 import { Drawer, EmptyRow, Modal, PageHeader, PrivacyNote, Section, StatusText, Steps, Timeline } from "./ui";
 
 type Tab = "requests" | "pilgrims" | "history";
@@ -10,6 +11,7 @@ export default function CompanyPortal({ companyId, tab, openId, setOpenId }: {
   companyId: string; tab: Tab; openId: string | null; setOpenId: (id: string | null) => void;
 }) {
   const { state, now } = useStore();
+  const { t } = useT();
   const [assignFor, setAssignFor] = useState<Pilgrim | null>(null);
   const mine = state.pilgrims.filter((p) => p.companyId === companyId);
   const late = mine.filter((p) => isLate(p, now));
@@ -20,10 +22,10 @@ export default function CompanyPortal({ companyId, tab, openId, setOpenId }: {
       {late.length > 0 && (
         <div className="alert-bar" role="alert">
           <span>
-            <b>{late.length === 1 ? `Vehicle late for ${late[0].name}.` : `${late.length} vehicles are late.`}</b> The hospital can see the delay on its ward board.
+            <b>{late.length === 1 ? t("Vehicle late for {name}.", { name: late[0].name }) : t("{n} vehicles are late.", { n: late.length })}</b> {t("The hospital can see the delay on its ward board.")}
           </span>
           <button className="link" onClick={() => setOpenId(late[0].id)}>
-            Open
+            {t("Open")}
           </button>
         </div>
       )}
@@ -38,6 +40,8 @@ export default function CompanyPortal({ companyId, tab, openId, setOpenId }: {
 
 function Requests({ companyId, list, onOpen, onAssign }: { companyId: string; list: Pilgrim[]; onOpen: (id: string) => void; onAssign: (p: Pilgrim) => void }) {
   const { now, hospital, company, driver } = useStore();
+  const T = useT();
+  const { t, p: pn } = T;
   const c = company(companyId);
   const needs = list.filter((p) => p.status === "ready").sort((a, b) => a.pickup!.requestedAt - b.pickup!.requestedAt);
   const moving = list.filter((p) => ["ride_requested", "assigned", "accepted", "picked_up"].includes(p.status)).sort((a, b) => a.pickup!.requestedAt - b.pickup!.requestedAt);
@@ -47,26 +51,22 @@ function Requests({ companyId, list, onOpen, onAssign }: { companyId: string; li
   return (
     <div className="page">
       <PageHeader
-        title="Pickup requests"
-        meta={
-          <>
-            {c.name} · {c.plan === "full" ? "Full plan, Rabt rides available" : "Basic plan, own vehicles"} · {inTreatment} still in treatment
-          </>
-        }
+        title={t("Pickup requests")}
+        meta={t(c.plan === "full" ? "{company} · Full plan, Rabt rides available · {n} still in treatment" : "{company} · Basic plan, own vehicles · {n} still in treatment", { company: c.name, n: inTreatment })}
       />
 
-      <Section title="Need a vehicle" count={needs.length}>
+      <Section title={t("Need a vehicle")} count={needs.length}>
         <div className="table-wrap">
           <table className="table">
             <thead>
               <tr>
-                <th>Pilgrim</th>
-                <th>Hospital</th>
-                <th className="r">Ready</th>
-                <th className="r">Waiting</th>
-                <th>Needs</th>
+                <th>{t("Pilgrim")}</th>
+                <th>{t("Hospital")}</th>
+                <th className="r">{t("Ready")}</th>
+                <th className="r">{t("Waiting")}</th>
+                <th>{t("Needs")}</th>
                 <th className="actions-col">
-                  <span className="sr-only">Actions</span>
+                  <span className="sr-only">{t("Actions")}</span>
                 </th>
               </tr>
             </thead>
@@ -78,21 +78,21 @@ function Requests({ companyId, list, onOpen, onAssign }: { companyId: string; li
                   <tr key={p.id}>
                     <td>
                       <button className="link name" onClick={() => onOpen(p.id)}>
-                        {p.name}
+                        {pn(p.name)}
                       </button>
-                      <div className="dim small">To {p.accommodation}</div>
+                      <div className="dim small">{t("To {place}", { place: p.accommodation })}</div>
                     </td>
                     <td>
-                      {h.name}
-                      <div className="dim small mono">Ward {h.wardPhone}</div>
+                      {pn(h.name)}
+                      <div className="dim small mono">{t("Ward {phone}", { phone: h.wardPhone })}</div>
                     </td>
                     <td className="mono r">{fmtTime(p.pickup!.requestedAt)}</td>
-                    <td className={`mono r ${wait >= 15 ? "t-amber strong" : ""}`}>{wait} min</td>
-                    <td>{p.checklist?.mobility === "wheelchair" ? <span className="t-blue"><LuAccessibility aria-hidden="true" /> Wheelchair</span> : <span className="dim">Walking</span>}</td>
+                    <td className={`mono r ${wait >= 15 ? "t-amber strong" : ""}`}>{t("{n} min", { n: wait })}</td>
+                    <td>{p.checklist?.mobility === "wheelchair" ? <span className="t-blue"><LuAccessibility aria-hidden="true" /> {t("Wheelchair")}</span> : <span className="dim">{t("Walking")}</span>}</td>
                     <td className="actions-col">
                       <div className="row-actions">
                         <button className="btn primary sm" onClick={() => onAssign(p)}>
-                          Send our vehicle
+                          {t("Send our vehicle")}
                         </button>
                         <RideButton p={p} />
                       </div>
@@ -100,22 +100,22 @@ function Requests({ companyId, list, onOpen, onAssign }: { companyId: string; li
                   </tr>
                 );
               })}
-              {!needs.length && <EmptyRow cols={6} text="No pickups waiting. New requests appear here when a hospital confirms a pilgrim is ready." />}
+              {!needs.length && <EmptyRow cols={6} text={t("No pickups waiting. New requests appear here when a hospital confirms a pilgrim is ready.")} />}
             </tbody>
           </table>
         </div>
       </Section>
 
-      <Section title="In progress" count={moving.length}>
+      <Section title={t("In progress")} count={moving.length}>
         <div className="table-wrap">
           <table className="table">
             <thead>
               <tr>
-                <th>Pilgrim</th>
-                <th>Hospital</th>
-                <th>Driver</th>
-                <th className="r">Due</th>
-                <th>Status</th>
+                <th>{t("Pilgrim")}</th>
+                <th>{t("Hospital")}</th>
+                <th>{t("Driver")}</th>
+                <th className="r">{t("Due")}</th>
+                <th>{t("Status")}</th>
               </tr>
             </thead>
             <tbody>
@@ -123,11 +123,11 @@ function Requests({ companyId, list, onOpen, onAssign }: { companyId: string; li
                 const d = driver(p.pickup?.driverId);
                 return (
                   <tr key={p.id} className="clickable" tabIndex={0} onClick={() => onOpen(p.id)} onKeyDown={(e) => e.key === "Enter" && onOpen(p.id)}>
-                    <td className="name">{p.name}</td>
-                    <td>{hospital(p.hospitalId).name}</td>
+                    <td className="name">{pn(p.name)}</td>
+                    <td>{pn(hospital(p.hospitalId).name)}</td>
                     <td>
-                      {d ? d.name : <span className="dim">Fleet partner assigning</span>}
-                      {d && <span className="dim">{p.pickup?.mode === "rabt" ? " · Rabt ride" : " · own"}</span>}
+                      {d ? pn(d.name) : <span className="dim">{t("Fleet partner assigning")}</span>}
+                      {d && <span className="dim">{t(p.pickup?.mode === "rabt" ? " · Rabt ride" : " · own")}</span>}
                     </td>
                     <td className="mono r">{p.status === "accepted" && p.pickup?.eta ? fmtTime(p.pickup.eta) : "–"}</td>
                     <td>
@@ -136,33 +136,33 @@ function Requests({ companyId, list, onOpen, onAssign }: { companyId: string; li
                   </tr>
                 );
               })}
-              {!moving.length && <EmptyRow cols={5} text="Nothing in progress." />}
+              {!moving.length && <EmptyRow cols={5} text={t("Nothing in progress.")} />}
             </tbody>
           </table>
         </div>
       </Section>
 
-      <Section title="Still in treatment" count={soon.length}>
+      <Section title={t("Still in treatment")} count={soon.length}>
         <div className="table-wrap">
           <table className="table">
             <thead>
               <tr>
-                <th>Pilgrim</th>
-                <th>Hospital</th>
-                <th className="r">Admitted</th>
-                <th className="r">Expected ready</th>
+                <th>{t("Pilgrim")}</th>
+                <th>{t("Hospital")}</th>
+                <th className="r">{t("Admitted")}</th>
+                <th className="r">{t("Expected ready")}</th>
               </tr>
             </thead>
             <tbody>
               {soon.map((p) => (
                 <tr key={p.id} className="clickable" tabIndex={0} onClick={() => onOpen(p.id)} onKeyDown={(e) => e.key === "Enter" && onOpen(p.id)}>
-                  <td className="name">{p.name}</td>
-                  <td>{hospital(p.hospitalId).name}</td>
+                  <td className="name">{pn(p.name)}</td>
+                  <td>{pn(hospital(p.hospitalId).name)}</td>
                   <td className="mono r">{fmtTime(p.admittedAt)}</td>
-                  <td className="r">{expectedCell(p, now)}</td>
+                  <td className="r">{expectedCell(p, now, T)}</td>
                 </tr>
               ))}
-              {!soon.length && <EmptyRow cols={4} text="None of your pilgrims are in treatment." />}
+              {!soon.length && <EmptyRow cols={4} text={t("None of your pilgrims are in treatment.")} />}
             </tbody>
           </table>
         </div>
@@ -171,30 +171,32 @@ function Requests({ companyId, list, onOpen, onAssign }: { companyId: string; li
   );
 }
 
-function expectedCell(p: Pilgrim, now: number) {
-  if (!p.expectedReadyAt) return <span className="dim">Waiting for the doctor</span>;
+function expectedCell(p: Pilgrim, now: number, { t, dur }: T) {
+  if (!p.expectedReadyAt) return <span className="dim">{t("Waiting for the doctor")}</span>;
   const diff = minutes(p.expectedReadyAt - now);
   return (
     <>
       <span className="mono">~{fmtTime(p.expectedReadyAt)}</span>
-      <span className="dim small">{p.expectedReadyAt > now ? ` · in ${fmtDuration(diff)}` : " · any time now"}</span>
+      <span className="dim small">{p.expectedReadyAt > now ? t(" · in {dur}", { dur: dur(diff) }) : t(" · any time now")}</span>
     </>
   );
 }
 
 function RideButton({ p }: { p: Pilgrim }) {
   const { company, requestRide } = useStore();
+  const { t } = useT();
   const full = company(p.companyId).plan === "full";
-  if (!full) return <span className="dim small">Rabt ride: Full plan</span>;
+  if (!full) return <span className="dim small">{t("Rabt ride: Full plan")}</span>;
   return (
     <button className="btn sm" onClick={() => requestRide(p.id)}>
-      Request Rabt ride
+      {t("Request Rabt ride")}
     </button>
   );
 }
 
 function AssignModal({ p, companyId, onClose }: { p: Pilgrim | null; companyId: string; onClose: () => void }) {
   const { state, assignOwn, etaFor } = useStore();
+  const { t, p: pn } = useT();
   const [driverId, setDriverId] = useState<string>("");
   if (!p) return null;
   const drivers = state.drivers.filter((d) => d.companyId === companyId).sort((a, b) => etaFor(a.id, p.hospitalId).minutes - etaFor(b.id, p.hospitalId).minutes);
@@ -203,35 +205,35 @@ function AssignModal({ p, companyId, onClose }: { p: Pilgrim | null; companyId: 
   const chosen = drivers.find((d) => d.id === driverId);
 
   return (
-    <Modal open={!!p} onClose={onClose} title={`Send a vehicle for ${p.name}`}>
+    <Modal open={!!p} onClose={onClose} title={t("Send a vehicle for {name}", { name: p.name })}>
       <fieldset className="radios">
-        <legend className="label">Driver</legend>
+        <legend className="label">{t("Driver")}</legend>
         {drivers.map((d) => (
           <label key={d.id} className="radio driver-opt">
             <input id={`drv-${d.id}`} type="radio" name="driver" checked={driverId === d.id} onChange={() => setDriverId(d.id)} />
             <span>
-              {d.name}
+              {pn(d.name)}
               <span className="dim">
                 {" "}
-                · {d.vehicle} · <span className="mono">{d.plate}</span>
-                {d.wheelchair ? " · accessible" : ""}
-                {busy(d.id) ? " · on another trip" : ""}
+                · {pn(d.vehicle)} · <span className="mono">{d.plate}</span>
+                {d.wheelchair ? t(" · accessible") : ""}
+                {busy(d.id) ? t(" · on another trip") : ""}
               </span>
-              <span className="dim small opt-where">Now at {d.at}</span>
+              <span className="dim small opt-where">{t("Now at {place}", { place: d.at })}</span>
             </span>
             <span className="opt-eta">
-              <span className="mono">{etaFor(d.id, p.hospitalId).minutes} min</span>
-              <span className="dim small">{etaFor(d.id, p.hospitalId).km} km</span>
+              <span className="mono">{t("{n} min", { n: etaFor(d.id, p.hospitalId).minutes })}</span>
+              <span className="dim small">{t("{n} km", { n: etaFor(d.id, p.hospitalId).km })}</span>
             </span>
           </label>
         ))}
-        {!drivers.length && <p className="dim">No drivers set up for this company.</p>}
+        {!drivers.length && <p className="dim">{t("No drivers set up for this company.")}</p>}
       </fieldset>
-      {needsChair && chosen && !chosen.wheelchair && <p className="note amber">This pilgrim uses a wheelchair and this vehicle isn't marked accessible.</p>}
-      <p className="dim small">Times are Rabt's estimate to reach the hospital. The driver confirms an arrival time on their phone, and the hospital sees it on the ward board.</p>
+      {needsChair && chosen && !chosen.wheelchair && <p className="note amber">{t("This pilgrim uses a wheelchair and this vehicle isn't marked accessible.")}</p>}
+      <p className="dim small">{t("Times are Rabt's estimate to reach the hospital. The driver confirms an arrival time on their phone, and the hospital sees it on the ward board.")}</p>
       <div className="modal-actions">
         <button className="btn" onClick={onClose}>
-          Cancel
+          {t("Cancel")}
         </button>
         <button
           className="btn primary"
@@ -242,7 +244,7 @@ function AssignModal({ p, companyId, onClose }: { p: Pilgrim | null; companyId: 
             onClose();
           }}
         >
-          Assign driver
+          {t("Assign driver")}
         </button>
       </div>
     </Modal>
@@ -251,39 +253,41 @@ function AssignModal({ p, companyId, onClose }: { p: Pilgrim | null; companyId: 
 
 function InHospital({ list, onOpen }: { list: Pilgrim[]; onOpen: (id: string) => void }) {
   const { now, hospital } = useStore();
+  const T = useT();
+  const { t, p: pn } = T;
   const rows = list.filter((p) => p.status !== "arrived").sort((a, b) => order(a) - order(b));
   return (
     <div className="page">
-      <PageHeader title="Pilgrims in hospital" meta="Where each of your pilgrims is. Clinical details stay with the hospital." />
+      <PageHeader title={t("Pilgrims in hospital")} meta={t("Where each of your pilgrims is. Clinical details stay with the hospital.")} />
       <div className="table-wrap">
         <table className="table">
           <thead>
             <tr>
-              <th>Pilgrim</th>
-              <th>ID</th>
-              <th>Hospital</th>
-              <th>Status</th>
-              <th className="r">Expected ready</th>
-              <th className="r">Since</th>
+              <th>{t("Pilgrim")}</th>
+              <th>{t("ID")}</th>
+              <th>{t("Hospital")}</th>
+              <th>{t("Status")}</th>
+              <th className="r">{t("Expected ready")}</th>
+              <th className="r">{t("Since")}</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((p) => (
               <tr key={p.id} className="clickable" tabIndex={0} onClick={() => onOpen(p.id)} onKeyDown={(e) => e.key === "Enter" && onOpen(p.id)}>
                 <td>
-                  <span className="name">{p.name}</span>
-                  <span className="dim"> · {p.nationality}</span>
+                  <span className="name">{pn(p.name)}</span>
+                  <span className="dim"> · {pn(p.nationality)}</span>
                 </td>
                 <td className="mono dim">{p.idNumber}</td>
-                <td>{hospital(p.hospitalId).name}</td>
+                <td>{pn(hospital(p.hospitalId).name)}</td>
                 <td>
                   <StatusText p={p} now={now} />
                 </td>
-                <td className="r">{p.status === "in_treatment" ? expectedCell(p, now) : <span className="dim">Ready</span>}</td>
+                <td className="r">{p.status === "in_treatment" ? expectedCell(p, now, T) : <span className="dim">{t("Ready")}</span>}</td>
                 <td className="mono r">{p.status === "in_treatment" ? fmtTime(p.admittedAt) : fmtTime(p.pickup!.requestedAt)}</td>
               </tr>
             ))}
-            {!rows.length && <EmptyRow cols={6} text="None of your pilgrims are in hospital." />}
+            {!rows.length && <EmptyRow cols={6} text={t("None of your pilgrims are in hospital.")} />}
           </tbody>
         </table>
       </div>
@@ -297,6 +301,7 @@ function order(p: Pilgrim) {
 
 function History({ list, onOpen }: { list: Pilgrim[]; onOpen: (id: string) => void }) {
   const { hospital, driver } = useStore();
+  const { t, p: pn, dur } = useT();
   const done = list.filter((p) => p.status === "arrived").sort((a, b) => b.pickup!.arrivedAt! - a.pickup!.arrivedAt!);
   const waits = done.map((p) => minutes(p.pickup!.pickedUpAt! - p.pickup!.requestedAt)).sort((a, b) => a - b);
   const mid = Math.floor(waits.length / 2);
@@ -304,36 +309,36 @@ function History({ list, onOpen }: { list: Pilgrim[]; onOpen: (id: string) => vo
 
   return (
     <div className="page">
-      <PageHeader title="Completed" meta={done.length ? <>{done.length} pickups · median wait in the ward {fmtDuration(median)}</> : "No completed pickups yet"} />
+      <PageHeader title={t("Completed")} meta={done.length ? t("{n} pickups · median wait in the ward {dur}", { n: done.length, dur: dur(median) }) : t("No completed pickups yet")} />
       <div className="table-wrap">
         <table className="table">
           <thead>
             <tr>
-              <th>Pilgrim</th>
-              <th>Hospital</th>
-              <th>Driver</th>
-              <th className="r">Ready</th>
-              <th className="r">Picked up</th>
-              <th className="r">Wait</th>
-              <th className="r">Arrived</th>
+              <th>{t("Pilgrim")}</th>
+              <th>{t("Hospital")}</th>
+              <th>{t("Driver")}</th>
+              <th className="r">{t("Ready")}</th>
+              <th className="r">{t("Picked up")}</th>
+              <th className="r">{t("Wait")}</th>
+              <th className="r">{t("Arrived")}</th>
             </tr>
           </thead>
           <tbody>
             {done.map((p) => (
               <tr key={p.id} className="clickable" tabIndex={0} onClick={() => onOpen(p.id)} onKeyDown={(e) => e.key === "Enter" && onOpen(p.id)}>
-                <td className="name">{p.name}</td>
-                <td>{hospital(p.hospitalId).name}</td>
+                <td className="name">{pn(p.name)}</td>
+                <td>{pn(hospital(p.hospitalId).name)}</td>
                 <td>
-                  {driver(p.pickup!.driverId)?.name}
-                  <span className="dim">{p.pickup!.mode === "rabt" ? " · Rabt ride" : " · own"}</span>
+                  {pn(driver(p.pickup!.driverId)?.name ?? "")}
+                  <span className="dim">{t(p.pickup!.mode === "rabt" ? " · Rabt ride" : " · own")}</span>
                 </td>
                 <td className="mono r">{fmtTime(p.pickup!.requestedAt)}</td>
                 <td className="mono r">{fmtTime(p.pickup!.pickedUpAt!)}</td>
-                <td className="mono r">{minutes(p.pickup!.pickedUpAt! - p.pickup!.requestedAt)} min</td>
+                <td className="mono r">{t("{n} min", { n: minutes(p.pickup!.pickedUpAt! - p.pickup!.requestedAt) })}</td>
                 <td className="mono r">{fmtTime(p.pickup!.arrivedAt!)}</td>
               </tr>
             ))}
-            {!done.length && <EmptyRow cols={7} text="Completed pickups are listed here with every time." />}
+            {!done.length && <EmptyRow cols={7} text={t("Completed pickups are listed here with every time.")} />}
           </tbody>
         </table>
       </div>
@@ -343,33 +348,30 @@ function History({ list, onOpen }: { list: Pilgrim[]; onOpen: (id: string) => vo
 
 function CompanyDrawer({ p, onClose, onAssign }: { p: Pilgrim | null; onClose: () => void; onAssign: (p: Pilgrim) => void }) {
   const { now, hospital, driver } = useStore();
+  const { t, p: pn, dur } = useT();
   if (!p) return null;
   const h = hospital(p.hospitalId);
   const d = driver(p.pickup?.driverId);
   return (
-    <Drawer open={!!p} onClose={onClose} title={p.name} sub={<StatusText p={p} now={now} />}>
+    <Drawer open={!!p} onClose={onClose} title={pn(p.name)} sub={<StatusText p={p} now={now} />}>
       {p.status === "ready" && (
         <div className="d-sec">
           <div className="row-actions">
             <button className="btn primary" onClick={() => onAssign(p)}>
-              Send our vehicle
+              {t("Send our vehicle")}
             </button>
             <RideButton p={p} />
           </div>
-          <p className="dim small">Waiting in the ward for {fmtDuration(minutes(now - p.pickup!.requestedAt))}.</p>
+          <p className="dim small">{t("Waiting in the ward for {dur}.", { dur: dur(minutes(now - p.pickup!.requestedAt)) })}</p>
         </div>
       )}
       {p.status === "in_treatment" && (
         <div className="d-sec">
           <p className="note">
-            In treatment since <span className="mono">{fmtTime(p.admittedAt)}</span>.{" "}
-            {p.expectedReadyAt ? (
-              <>
-                Expected ready around <span className="mono">{fmtTime(p.expectedReadyAt)}</span>. You will get a pickup request when the hospital confirms.
-              </>
-            ) : (
-              "The hospital has not given an expected ready time yet."
-            )}
+            {t("In treatment since {time}.", { time: fmtTime(p.admittedAt) })}{" "}
+            {p.expectedReadyAt
+              ? t("Expected ready around {time}. You will get a pickup request when the hospital confirms.", { time: fmtTime(p.expectedReadyAt) })
+              : t("The hospital has not given an expected ready time yet.")}
           </p>
         </div>
       )}
@@ -377,42 +379,37 @@ function CompanyDrawer({ p, onClose, onAssign }: { p: Pilgrim | null; onClose: (
         <div className="d-sec">
           <Steps p={p} />
           {WAITING.includes(p.status) && p.status !== "ready" && (
-            <p className="dim small">Waiting in the ward for {fmtDuration(minutes(now - p.pickup!.requestedAt))}.</p>
+            <p className="dim small">{t("Waiting in the ward for {dur}.", { dur: dur(minutes(now - p.pickup!.requestedAt)) })}</p>
           )}
         </div>
       )}
       <div className="d-sec">
         <dl className="dl">
-          <dt>ID</dt>
+          <dt>{t("ID")}</dt>
           <dd className="mono">{p.idNumber}</dd>
-          <dt>Hospital</dt>
-          <dd>
-            {h.name}, {h.area}
-          </dd>
-          <dt>Ward phone</dt>
-          <dd className="mono">{h.wardPhone}</dd>
-          <dt>Accommodation</dt>
-          <dd>{p.accommodation}</dd>
+          <dt>{t("Hospital")}</dt>
+          <dd>{t("{hospital}, {area}", { hospital: h.name, area: h.area })}</dd>
+          <dt>{t("Ward phone")}</dt>
+          <dd className="mono" dir="ltr">{h.wardPhone}</dd>
+          <dt>{t("Accommodation")}</dt>
+          <dd>{pn(p.accommodation)}</dd>
           {p.checklist && (
             <>
-              <dt>Mobility</dt>
-              <dd>{p.checklist.mobility === "wheelchair" ? "Wheelchair" : "Walking"}</dd>
+              <dt>{t("Mobility")}</dt>
+              <dd>{t(p.checklist.mobility === "wheelchair" ? "Wheelchair" : "Walking")}</dd>
             </>
           )}
           {d && (
             <>
-              <dt>Driver</dt>
-              <dd>
-                {d.name}, {d.vehicle} <span className="mono">{d.plate}</span>
-              </dd>
+              <dt>{t("Driver")}</dt>
+              <dd>{t("{driver}, {vehicle} {plate}", { driver: d.name, vehicle: d.vehicle, plate: d.plate })}</dd>
             </>
           )}
           {p.status === "accepted" && p.pickup?.eta && (
             <>
-              <dt>Due at hospital</dt>
+              <dt>{t("Due at hospital")}</dt>
               <dd className={isLate(p, now) ? "t-red" : ""}>
-                <span className="mono">{fmtTime(p.pickup.eta)}</span>
-                {isLate(p, now) ? `, ${minutes(now - p.pickup.eta)} min late` : ""}
+                {isLate(p, now) ? t("{time}, {n} min late", { time: fmtTime(p.pickup.eta), n: minutes(now - p.pickup.eta) }) : fmtTime(p.pickup.eta)}
               </dd>
             </>
           )}
@@ -422,7 +419,7 @@ function CompanyDrawer({ p, onClose, onAssign }: { p: Pilgrim | null; onClose: (
         <PrivacyNote />
       </div>
       <div className="d-sec">
-        <div className="label">Timeline</div>
+        <div className="label">{t("Timeline")}</div>
         <Timeline p={p} />
       </div>
     </Drawer>

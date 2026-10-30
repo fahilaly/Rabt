@@ -3,6 +3,7 @@ import { LuPause, LuPlay, LuRotateCcw, LuSkipForward, LuX, LuMessageSquare } fro
 import type { DemoState, DirectoryEntry, Sms } from "./types";
 import { fmtTime, useStore } from "./store";
 import { suggestChoice } from "./eta";
+import { useT, type T } from "./i18n";
 
 // ---------------------------------------------------------------------------
 // Demo mode: plays one pilgrim's journey on the real app, step by step.
@@ -26,7 +27,7 @@ type Api = ReturnType<typeof useStore>;
 interface Step {
   title: string;
   where: string;
-  caption: (api: Api, d: DemoState) => string;
+  caption: (api: Api, d: DemoState, t: T["t"]) => string;
   view: (d: DemoState) => View;
   run?: (api: Api, d: DemoState) => Partial<DemoState> | void;
 }
@@ -51,8 +52,8 @@ export const STEPS: Step[] = [
   {
     title: "A pilgrim arrives at emergency",
     where: "Hospital",
-    caption: () =>
-      "Ahmad Fauzi, 59, an Umrah pilgrim from Indonesia, collapses in the heat and is brought to Al-Haram East Hospital. The desk enters his booking number and Rabt finds his company, Al-Safwa Umrah.",
+    caption: (_a, _d, t) =>
+      t("Ahmad Fauzi, 59, an Umrah pilgrim from Indonesia, collapses in the heat and is brought to Al-Haram East Hospital. The desk enters his booking number and Rabt finds his company, Al-Safwa Umrah."),
     view: (d) => ({ portal: "hospital", hospitalId: HOSPITAL, htab: "patients", openId: d.pilgrimId }),
     run: (api) => {
       api.reset();
@@ -63,17 +64,17 @@ export const STEPS: Step[] = [
   {
     title: "The company knows at once",
     where: "Company",
-    caption: (api) => {
+    caption: (api, _d, t) => {
       const c = api.company(COMPANY);
-      return `${c.manager}, the ${c.name} manager, gets an SMS and sees Ahmad under Pilgrims in hospital: where he is, not why. No phone calls between hospital and company.`;
+      return t("{manager}, the {company} manager, gets an SMS and sees Ahmad under Pilgrims in hospital: where he is, not why. No phone calls between hospital and company.", { manager: c.manager, company: c.name });
     },
     view: (d) => ({ portal: "company", companyId: COMPANY, ctab: "pilgrims", openId: d.pilgrimId }),
   },
   {
     title: "Diagnosis and time estimate",
     where: "Hospital",
-    caption: () =>
-      "The doctor records heat exhaustion. Rabt suggests a typical stay of 2 hours for this condition and the doctor confirms. The diagnosis stays inside the hospital.",
+    caption: (_a, _d, t) =>
+      t("The doctor records heat exhaustion. Rabt suggests a typical stay of 2 hours for this condition and the doctor confirms. The diagnosis stays inside the hospital."),
     view: (d) => ({ portal: "hospital", hospitalId: HOSPITAL, htab: "patients", openId: d.pilgrimId }),
     run: (api, d) => {
       api.diagnose(d.pilgrimId!, { conditionId: "heat", note: "IV fluids, observe", stayMin: 120 });
@@ -82,18 +83,18 @@ export const STEPS: Step[] = [
   {
     title: "The company plans ahead",
     where: "Company",
-    caption: (api, d) => {
+    caption: (api, d, t) => {
       const x = p(api, d);
-      const t = x?.expectedReadyAt ? fmtTime(x.expectedReadyAt) : "the expected time";
-      return `Al-Safwa receives only the expected ready time, around ${t}, by SMS and on screen. It can line up a vehicle instead of waiting for a call.`;
+      const time = x?.expectedReadyAt ? fmtTime(x.expectedReadyAt) : "–";
+      return t("Al-Safwa receives only the expected ready time, around {time}, by SMS and on screen. It can line up a vehicle instead of waiting for a call.", { time });
     },
     view: () => ({ portal: "company", companyId: COMPANY, ctab: "requests", openId: null }),
   },
   {
     title: "Ready for transport",
     where: "Recovery ward",
-    caption: () =>
-      "Two hours later the nurse ticks the three-item checklist and taps Ready for transport. Ahmad appears on the recovery-ward board and the company gets a pickup request by SMS.",
+    caption: (_a, _d, t) =>
+      t("Two hours later the nurse ticks the three-item checklist and taps Ready for transport. Ahmad appears on the recovery-ward board and the company gets a pickup request by SMS."),
     view: () => ({ portal: "hospital", hospitalId: HOSPITAL, htab: "ward", openId: null }),
     run: (api, d) => {
       api.rewind(d.pilgrimId!, 110);
@@ -103,12 +104,12 @@ export const STEPS: Step[] = [
   {
     title: "The nearest vehicle is sent",
     where: "Company",
-    caption: (api, d) => {
+    caption: (api, d, t) => {
       const dr = drv(api, d);
       const x = p(api, d);
       return dr
-        ? `Rabt lists Al-Safwa's drivers by travel time. ${dr.name} is ${x?.pickup?.estimateMin ?? "a few"} min away. One tap assigns him and texts him the pickup.`
-        : "Rabt lists the company's drivers by travel time and the nearest one is assigned.";
+        ? t("Rabt lists Al-Safwa's drivers by travel time. {driver} is {n} min away. One tap assigns him and texts him the pickup.", { driver: dr.name, n: x?.pickup?.estimateMin ?? "–" })
+        : t("Rabt lists the company's drivers by travel time and the nearest one is assigned.");
     },
     view: () => ({ portal: "company", companyId: COMPANY, ctab: "requests", openId: null }),
     run: (api, d) => {
@@ -124,10 +125,10 @@ export const STEPS: Step[] = [
   {
     title: "The driver accepts",
     where: "Driver app",
-    caption: (api, d) => {
+    caption: (api, d, t) => {
       const x = p(api, d);
       const dr = drv(api, d);
-      return `${dr?.name ?? "The driver"} accepts on his phone and confirms he will be at the hospital by ${x?.pickup?.eta ? fmtTime(x.pickup.eta) : "the promised time"}. The ward board now shows that time.`;
+      return t("{driver} accepts on his phone and confirms he will be at the hospital by {time}. The ward board now shows that time.", { driver: dr?.name ?? t("The driver"), time: x?.pickup?.eta ? fmtTime(x.pickup.eta) : "–" });
     },
     view: (d) => ({ portal: "transport", ttab: "driver", driverId: d.driverId, openId: null }),
     run: (api, d) => {
@@ -139,8 +140,8 @@ export const STEPS: Step[] = [
   {
     title: "Running late, alert sent",
     where: "Recovery ward",
-    caption: () =>
-      "Traffic near the Haram. The promised time passes, the row turns red, and Rabt texts the company manager automatically. Nobody has to chase anyone by phone.",
+    caption: (_a, _d, t) =>
+      t("Traffic near the Haram. The promised time passes, the row turns red, and Rabt texts the company manager automatically. Nobody has to chase anyone by phone."),
     view: () => ({ portal: "hospital", hospitalId: HOSPITAL, htab: "ward", openId: null }),
     run: (api, d) => {
       const x = p(api, d);
@@ -152,8 +153,8 @@ export const STEPS: Step[] = [
   {
     title: "Picked up",
     where: "Recovery ward",
-    caption: (api, d) =>
-      `${drv(api, d)?.name ?? "The driver"} arrives and taps Picked up. Ahmad leaves the recovery ward and the board updates for the nurses.`,
+    caption: (api, d, t) =>
+      t("{driver} arrives and taps Picked up. Ahmad leaves the recovery ward and the board updates for the nurses.", { driver: drv(api, d)?.name ?? t("The driver") }),
     view: () => ({ portal: "hospital", hospitalId: HOSPITAL, htab: "ward", openId: null }),
     run: (api, d) => {
       api.pickedUp(d.pilgrimId!);
@@ -162,8 +163,8 @@ export const STEPS: Step[] = [
   {
     title: "Home, case closed",
     where: "Company",
-    caption: () =>
-      "Ahmad is back at his hotel. Every step was timestamped, including how long he waited in the ward. Those times feed the reports and the time estimates.",
+    caption: (_a, _d, t) =>
+      t("Ahmad is back at his hotel. Every step was timestamped, including how long he waited in the ward. Those times feed the reports and the time estimates."),
     view: (d) => ({ portal: "company", companyId: COMPANY, ctab: "history", openId: d.pilgrimId }),
     run: (api, d) => {
       api.rewind(d.pilgrimId!, 12);
@@ -176,6 +177,7 @@ const AUTO_MS = 9000;
 
 export function DemoBar({ nav, follow, setFollow }: { nav: (v: View) => void; follow: boolean; setFollow: (b: boolean) => void }) {
   const api = useStore();
+  const { t } = useT();
   const apiRef = useRef(api);
   apiRef.current = api;
   const d = api.state.demo;
@@ -212,7 +214,7 @@ export function DemoBar({ nav, follow, setFollow }: { nav: (v: View) => void; fo
   const last = d.step >= STEPS.length - 1;
 
   return (
-    <div className="demo-bar" role="region" aria-label="Demo">
+    <div className="demo-bar" role="region" aria-label={t("Demo")}>
       <div className="demo-progress" aria-hidden="true">
         {STEPS.map((_, i) => (
           <span key={i} className={i <= d.step ? "on" : ""} />
@@ -224,32 +226,32 @@ export function DemoBar({ nav, follow, setFollow }: { nav: (v: View) => void; fo
             <span className="mono demo-count">
               {d.step + 1}/{STEPS.length}
             </span>
-            <span className="demo-where">{step.where}</span>
-            <b>{step.title}</b>
+            <span className="demo-where">{t(step.where)}</span>
+            <b>{t(step.title)}</b>
           </div>
-          <p className="demo-caption">{step.caption(api, d)}</p>
+          <p className="demo-caption">{step.caption(api, d, t)}</p>
         </div>
         <div className="demo-actions">
           <label className="demo-follow">
             <input type="checkbox" checked={follow} onChange={(e) => setFollow(e.target.checked)} />
-            <span>Follow</span>
+            <span>{t("Follow")}</span>
           </label>
           {!last && (
-            <button className="btn sm" onClick={() => setPlaying(!playing)} aria-label={playing ? "Pause" : "Play"}>
+            <button className="btn sm" onClick={() => setPlaying(!playing)}>
               {playing ? <LuPause aria-hidden="true" /> : <LuPlay aria-hidden="true" />}
-              {playing ? "Pause" : "Play"}
+              {playing ? t("Pause") : t("Play")}
             </button>
           )}
           {!last ? (
             <button className="btn primary sm" onClick={() => go(d.step + 1)}>
-              Next <LuSkipForward aria-hidden="true" />
+              {t("Next")} <LuSkipForward aria-hidden="true" className="flip" />
             </button>
           ) : (
             <button className="btn primary sm" onClick={() => go(0)}>
-              <LuRotateCcw aria-hidden="true" /> Replay
+              <LuRotateCcw aria-hidden="true" /> {t("Replay")}
             </button>
           )}
-          <button className="icon-btn" aria-label="Exit demo" title="Exit demo" onClick={() => { setPlaying(false); api.setDemo(undefined); }}>
+          <button className="icon-btn" aria-label={t("Exit demo")} title={t("Exit demo")} onClick={() => { setPlaying(false); api.setDemo(undefined); }}>
             <LuX />
           </button>
         </div>
@@ -271,13 +273,14 @@ export function smsFor(messages: Sms[], who: { kind: "company" | "driver"; id: s
 }
 
 export function SmsPanel({ messages, title, onClose }: { messages: Sms[]; title: string; onClose: () => void }) {
+  const { t, tr } = useT();
   return (
-    <aside className="sms-panel" aria-label="Simulated SMS">
+    <aside className="sms-panel" aria-label={t("Simulated SMS")}>
       <div className="sms-head">
         <span>
           <LuMessageSquare aria-hidden="true" /> {title}
         </span>
-        <button className="icon-btn" aria-label="Close messages" onClick={onClose}>
+        <button className="icon-btn" aria-label={t("Close messages")} onClick={onClose}>
           <LuX />
         </button>
       </div>
@@ -285,26 +288,27 @@ export function SmsPanel({ messages, title, onClose }: { messages: Sms[]; title:
         {messages.slice(0, 20).map((m) => (
           <div key={m.id} className="sms">
             <div className="sms-meta">
-              <span>To {m.name}</span>
+              <span>{t("To {name}", { name: m.name })}</span>
               <span className="mono">{fmtTime(m.at)}</span>
             </div>
-            <div className="sms-bubble">{m.text}</div>
+            <div className="sms-bubble">{tr(m.text)}</div>
           </div>
         ))}
-        {!messages.length && <p className="dim small sms-empty">No messages yet.</p>}
+        {!messages.length && <p className="dim small sms-empty">{t("No messages yet.")}</p>}
       </div>
-      <p className="sms-foot dim small">Simulated. In a live version these go out by SMS or WhatsApp.</p>
+      <p className="sms-foot dim small">{t("Simulated. In a live version these go out by SMS or WhatsApp.")}</p>
     </aside>
   );
 }
 
 export function SmsToast({ m, onOpen }: { m: Sms; onOpen: () => void }) {
+  const { t, tr } = useT();
   return (
     <button className="sms-toast" onClick={onOpen}>
       <span className="sms-toast-to">
-        <LuMessageSquare aria-hidden="true" /> SMS to {m.name}
+        <LuMessageSquare aria-hidden="true" /> {t("SMS to {name}", { name: m.name })}
       </span>
-      <span className="sms-toast-text">{m.text}</span>
+      <span className="sms-toast-text">{tr(m.text)}</span>
     </button>
   );
 }

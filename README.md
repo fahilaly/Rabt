@@ -73,6 +73,7 @@ in_treatment → ready → (ride_requested) → assigned → accepted → picked
 | `src/stay.ts` | Expected-stay suggestions by condition group (sample figures) |
 | `src/Demo.tsx` | Demo mode steps and player, simulated SMS panel |
 | `src/sync.ts` | Shared data across devices on the published link |
+| `src/i18n.tsx` | Arabic / English text, names and places |
 | `src/HospitalPortal.tsx` | Ward board, patient list and drawer, ready checklist, register |
 | `src/CompanyPortal.tsx` | Pickup requests, assign vehicle, my pilgrims, history |
 | `src/TransportPortal.tsx` | Driver app, fleet dispatch |
@@ -80,21 +81,19 @@ in_treatment → ready → (ride_requested) → assigned → accepted → picked
 | `src/ui.tsx` | Shared pieces: status text, page header, steps, timeline, drawer, modal, privacy note |
 | `src/styles.css` | Design tokens (light and dark) and all styles |
 
-## Design rules
+## Design rules (design C, chosen by the team)
 
-The look is a working console (think Linear, Onfleet, NHS and GOV.UK services), not a
-template dashboard. Keep it that way when adding screens:
-
-- **Layout:** fixed left sidebar (role, sections, demo clock); work happens in dense tables
-  with the action in the row. Details open in a side drawer, not a new page.
-- **Recovery ward:** an airport-style departures board, always dark, with English and
-  Arabic column headers. Late rows turn red. Built to sit on a ward screen.
-- **Colour:** neutral greys plus one accent, Saudi green `#006C35`. Amber = waiting,
-  blue = moving, red = late. Colours live as tokens at the top of `styles.css` (light and dark).
-- **Type:** IBM Plex Sans / Plex Sans Arabic; Plex Mono for times, IDs and plates. 24-hour times.
-- **Status:** a small square plus a plain sentence ("Waiting for company", "Late 6 min").
-- **Avoid:** rows of big number tiles, rounded cards with soft shadows, pastel pill badges,
-  initials in circles, gradients, and explanatory subtitles under every heading.
+- **Arabic first.** The interface opens in Arabic, right to left; the English switch sits at the
+  bottom of the sidebar. All text goes through `t()` in `src/i18n.tsx` (English is the key,
+  Arabic the value). Names and places from the sample data go through `p()`. Stored notices,
+  timeline entries and SMS are saved in English and shown in Arabic by `tr()`.
+- **Layout:** green sidebar (role tabs, hospital or company, sections, demo controls), white work
+  area with bordered lists and tables, actions in the row, details in a side drawer.
+- **Recovery ward:** the dark departures board with Arabic and English column headers.
+- **Colour:** Saudi green `#006C35` plus greys; amber = waiting, blue = moving, red = late.
+- **Type:** IBM Plex Sans Arabic / IBM Plex Sans; IBM Plex Mono for times, IDs and plates.
+- **Spacing:** logical CSS properties (`margin-inline-start`, `text-align: start`), so one
+  stylesheet works in both directions. Do not use left/right.
 
 ## Connecting a real backend
 

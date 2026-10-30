@@ -6,6 +6,7 @@ import HospitalPortal from "./HospitalPortal";
 import CompanyPortal from "./CompanyPortal";
 import TransportPortal from "./TransportPortal";
 import { DemoBar, SmsPanel, SmsToast, smsFor, startDemo, type View } from "./Demo";
+import { useT } from "./i18n";
 
 type Portal = "hospital" | "company" | "transport";
 type HTab = "ward" | "patients" | "register";
@@ -41,6 +42,7 @@ function loadPrefs(): Prefs {
 export default function App() {
   const store = useStore();
   const { state, now, advanceClock, reset, syncMode } = store;
+  const { t, p, lang, setLang } = useT();
   const [prefs, setPrefs] = useState<Prefs>(loadPrefs);
   const [openId, setOpenId] = useState<string | null>(null);
   const [bellOpen, setBellOpen] = useState(false);
@@ -90,9 +92,9 @@ export default function App() {
   const sms = smsFor(state.messages ?? [], smsWho);
   const smsTitle = smsWho
     ? smsWho.kind === "company"
-      ? `${store.company(smsWho.id).manager}'s phone`
-      : `${store.driver(smsWho.id)?.name ?? "Driver"}'s phone`
-    : "SMS sent by Rabt";
+      ? t("{name}'s phone", { name: store.company(smsWho.id).manager })
+      : t("{name}'s phone", { name: store.driver(smsWho.id)?.name ?? "Driver" })
+    : t("SMS sent by Rabt");
   const latestSms = sms[0];
   const lastSmsId = useRef<string | undefined>(undefined);
   useEffect(() => {
@@ -156,7 +158,7 @@ export default function App() {
       <select id="persona" className="select" value={prefs.hospitalId} onChange={(e) => set({ hospitalId: e.target.value })}>
         {state.hospitals.map((h) => (
           <option key={h.id} value={h.id}>
-            {h.name}
+            {p(h.name)}
           </option>
         ))}
       </select>
@@ -164,27 +166,27 @@ export default function App() {
       <select id="persona" className="select" value={prefs.companyId} onChange={(e) => set({ companyId: e.target.value })}>
         {state.companies.map((c) => (
           <option key={c.id} value={c.id}>
-            {c.name}
+            {p(c.name)}
           </option>
         ))}
       </select>
     ) : (
       <select id="persona" className="select" value={prefs.driverId} onChange={(e) => set({ driverId: e.target.value })}>
-        <optgroup label="Company drivers">
+        <optgroup label={t("Company drivers")}>
           {state.drivers
             .filter((d) => d.companyId)
             .map((d) => (
               <option key={d.id} value={d.id}>
-                {d.name}
+                {p(d.name)}
               </option>
             ))}
         </optgroup>
-        <optgroup label="Fleet partner drivers">
+        <optgroup label={t("Fleet partner drivers")}>
           {state.drivers
             .filter((d) => !d.companyId)
             .map((d) => (
               <option key={d.id} value={d.id}>
-                {d.name}
+                {p(d.name)}
               </option>
             ))}
         </optgroup>
@@ -196,14 +198,12 @@ export default function App() {
       <aside className="side">
         <div className="side-top">
           <div className="wordmark">
-            <span className="wm-ar" lang="ar">
-              ربط
-            </span>
-            <span className="wm-en">Rabt</span>
+            <span className="wm">{t("Rabt")}</span>
+            <span className="wm-sub">{t("Pilgrim pickup from hospital")}</span>
           </div>
           <button
             className={`icon-btn bell ${bellOpen ? "on" : ""}`}
-            aria-label={`Notifications${unread ? `, ${unread} new` : ""}`}
+            aria-label={unread ? t("Notifications, {n} new", { n: unread }) : t("Notifications")}
             aria-expanded={bellOpen}
             onClick={() => {
               setBellOpen(!bellOpen);
@@ -215,55 +215,56 @@ export default function App() {
           </button>
         </div>
 
-        <div className="role-switch" role="tablist" aria-label="Role">
+        <div className="role-switch" role="tablist" aria-label={t("Role")}>
           {ROLES.map(([r, label, key]) => (
-            <button key={r} role="tab" aria-selected={prefs.portal === r} className={prefs.portal === r ? "on" : ""} title={`${label} (press ${key})`} onClick={() => set({ portal: r })}>
-              {label}
+            <button key={r} role="tab" aria-selected={prefs.portal === r} className={prefs.portal === r ? "on" : ""} title={t("{label} (press {key})", { label: t(label), key })} onClick={() => set({ portal: r })}>
+              {t(label)}
             </button>
           ))}
         </div>
 
         <div className="side-who">
           <label className="label" htmlFor="persona">
-            {prefs.portal === "hospital" ? "Hospital" : prefs.portal === "company" ? "Company" : "Driver"}
+            {t(prefs.portal === "hospital" ? "Hospital" : prefs.portal === "company" ? "Company" : "Driver")}
           </label>
           {personaSelect}
+          {prefs.portal === "company" && <span className="side-plan">{t(store.company(prefs.companyId).plan === "full" ? "Full plan" : "Basic plan")}</span>}
         </div>
 
-        <nav className="side-nav" aria-label="Sections">
+        <nav className="side-nav" aria-label={t("Sections")}>
           {prefs.portal === "hospital" && (
             <>
               <NavItem on={prefs.htab === "ward"} onClick={() => set({ htab: "ward" })} count={wardCount} alert={wardLate}>
-                Recovery ward
+                {t("Recovery ward")}
               </NavItem>
               <NavItem on={prefs.htab === "patients"} onClick={() => set({ htab: "patients" })} count={treat}>
-                Patients
+                {t("Patients")}
               </NavItem>
               <NavItem on={prefs.htab === "register"} onClick={() => set({ htab: "register" })}>
-                Register pilgrim
+                {t("Register pilgrim")}
               </NavItem>
             </>
           )}
           {prefs.portal === "company" && (
             <>
               <NavItem on={prefs.ctab === "requests"} onClick={() => set({ ctab: "requests" })} count={needs} alert={needs > 0}>
-                Pickup requests
+                {t("Pickup requests")}
               </NavItem>
               <NavItem on={prefs.ctab === "pilgrims"} onClick={() => set({ ctab: "pilgrims" })} count={compActive}>
-                Pilgrims in hospital
+                {t("Pilgrims in hospital")}
               </NavItem>
               <NavItem on={prefs.ctab === "history"} onClick={() => set({ ctab: "history" })}>
-                Completed
+                {t("Completed")}
               </NavItem>
             </>
           )}
           {prefs.portal === "transport" && (
             <>
               <NavItem on={prefs.ttab === "driver"} onClick={() => set({ ttab: "driver" })} count={driverJobs}>
-                Driver app
+                {t("Driver app")}
               </NavItem>
               <NavItem on={prefs.ttab === "dispatch"} onClick={() => set({ ttab: "dispatch" })} count={openRides} alert={openRides > 0}>
-                Fleet dispatch
+                {t("Fleet dispatch")}
               </NavItem>
             </>
           )}
@@ -272,28 +273,28 @@ export default function App() {
         <div className="side-foot">
           {!demoOn && (
             <button className="btn primary demo-start" onClick={() => startDemo(store)}>
-              <LuPlay aria-hidden="true" /> Start demo
+              <LuPlay aria-hidden="true" /> {t("Start demo")}
             </button>
           )}
           <button className={`btn sm sms-btn ${smsOpen ? "on" : ""}`} onClick={() => setSmsOpen(!smsOpen)} aria-expanded={smsOpen}>
-            <LuMessageSquare aria-hidden="true" /> Messages
+            <LuMessageSquare aria-hidden="true" /> {t("Messages")}
             {sms.length > 0 && <span className="mono dim">{sms.length}</span>}
           </button>
           <div className="clock">
-            <span className="label">Demo clock</span>
+            <span className="label">{t("Demo clock")}</span>
             <span className="mono clock-time">{fmtTime(now)}</span>
           </div>
           <div className="clock-actions">
             <button className="btn sm" onClick={() => advanceClock(5)}>
-              +5 min
+              {t("+{n} min", { n: 5 })}
             </button>
             <button className="btn sm" onClick={() => advanceClock(15)}>
-              +15 min
+              {t("+{n} min", { n: 15 })}
             </button>
             <button
               className="btn sm ghost"
-              aria-label="Reset sample data"
-              title="Reset sample data"
+              aria-label={t("Reset sample data")}
+              title={t("Reset sample data")}
               onClick={() => {
                 reset();
                 setOpenId(null);
@@ -304,8 +305,11 @@ export default function App() {
           </div>
           <p className="dim small">
             <span className={`sync-dot ${syncMode}`} aria-hidden="true" />
-            {syncMode === "shared" ? "Synced: open this link on another device to see the same data." : "Sample data. Syncs between tabs in this browser."}
+            {syncMode === "shared" ? t("Synced: open this link on another device to see the same data.") : t("Sample data. Syncs between tabs in this browser.")}
           </p>
+          <button className="link lang-toggle" lang={lang === "ar" ? "en" : "ar"} onClick={() => setLang(lang === "ar" ? "en" : "ar")}>
+            {lang === "ar" ? "English" : "العربية"}
+          </button>
         </div>
 
         {bellOpen && <Inbox onClose={() => setBellOpen(false)}>{<NoticeList items={mine.slice(0, 14)} onOpen={openFromNotice} />}</Inbox>}
@@ -335,6 +339,7 @@ function NavItem({ on, onClick, children, count, alert }: { on: boolean; onClick
 }
 
 function Inbox({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
+  const { t } = useT();
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const close = (e: MouseEvent) => {
@@ -350,8 +355,8 @@ function Inbox({ children, onClose }: { children: React.ReactNode; onClose: () =
     };
   }, [onClose]);
   return (
-    <div className="inbox" ref={ref} role="dialog" aria-label="Notifications">
-      <div className="inbox-head">Notifications</div>
+    <div className="inbox" ref={ref} role="dialog" aria-label={t("Notifications")}>
+      <div className="inbox-head">{t("Notifications")}</div>
       {children}
     </div>
   );
