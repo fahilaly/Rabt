@@ -13,10 +13,24 @@ import { connectShared, type Shared } from "./sync";
 
 export const MIN = 60_000;
 const KEY = "rabt-prototype-v1";
+const SEEN_KEY = "rabt-last-open";
 const LATE_GRACE_MIN = 0;
+// Coming back after this long starts again with fresh sample data, so the times
+// on screen are current instead of hours or days old. A reload mid-demo keeps the data.
+const STALE_MIN = 30;
+
+function markOpen() {
+  try {
+    localStorage.setItem(SEEN_KEY, String(Date.now()));
+  } catch {
+    /* ignore */
+  }
+}
 
 function load(): State | null {
   try {
+    const seen = Number(localStorage.getItem(SEEN_KEY) || 0);
+    if (Date.now() - seen > STALE_MIN * MIN) return null;
     const raw = localStorage.getItem(KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as State;
@@ -113,7 +127,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   // tick the clock so waiting times stay current
   useEffect(() => {
-    const t = setInterval(() => setTick(Date.now()), 15_000);
+    markOpen();
+    const t = setInterval(() => {
+      setTick(Date.now());
+      markOpen();
+    }, 15_000);
     return () => clearInterval(t);
   }, []);
 

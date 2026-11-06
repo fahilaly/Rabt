@@ -33,6 +33,8 @@ const AR: Record<string, string> = {
   "Demo clock": "ساعة العرض",
   "+{n} min": "+{n} د",
   "Reset sample data": "إعادة البيانات التجريبية",
+  "Light mode": "الوضع النهاري",
+  "Dark mode": "الوضع الليلي",
   "Synced: open this link on another device to see the same data.": "متزامن: افتح الرابط على جهاز آخر لترى البيانات نفسها.",
   "Sample data. Syncs between tabs in this browser.": "بيانات تجريبية، تتزامن بين نوافذ هذا المتصفح.",
   Notifications: "الإشعارات",

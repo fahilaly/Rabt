@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { LuBell, LuRotateCcw, LuPlay, LuMessageSquare, LuMenu, LuX } from "react-icons/lu";
+import { LuBell, LuRotateCcw, LuPlay, LuMessageSquare, LuMenu, LuX, LuMoon, LuSun } from "react-icons/lu";
 import { fmtTime, isLate, useStore, WAITING } from "./store";
 import { NoticeList } from "./ui";
 import HospitalPortal from "./HospitalPortal";
@@ -30,6 +30,17 @@ const ROLES: [Portal, string, string][] = [
 ];
 const defaults: Prefs = { portal: "hospital", hospitalId: "h1", companyId: "c1", driverId: "d1", htab: "ward", ctab: "requests", ttab: "driver" };
 
+type Theme = "light" | "dark";
+const THEME_KEY = "rabt-theme";
+
+function loadTheme(): Theme {
+  try {
+    return localStorage.getItem(THEME_KEY) === "dark" ? "dark" : "light";
+  } catch {
+    return "light";
+  }
+}
+
 function loadPrefs(): Prefs {
   try {
     const raw = localStorage.getItem(PREFS_KEY);
@@ -51,6 +62,16 @@ export default function App() {
   const [smsOpen, setSmsOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [theme, setTheme] = useState<Theme>(loadTheme);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    try {
+      localStorage.setItem(THEME_KEY, theme);
+    } catch {
+      /* ignore */
+    }
+  }, [theme]);
 
   useEffect(() => {
     try {
@@ -314,25 +335,30 @@ export default function App() {
             <button className="btn sm" onClick={() => advanceClock(15)}>
               {t("+{n} min", { n: 15 })}
             </button>
-            <button
-              className="btn sm ghost"
-              aria-label={t("Reset sample data")}
-              title={t("Reset sample data")}
-              onClick={() => {
-                reset();
-                setOpenId(null);
-              }}
-            >
-              <LuRotateCcw />
-            </button>
           </div>
+          <button
+            className="btn sm"
+            title={t("Reset sample data")}
+            onClick={() => {
+              reset();
+              setOpenId(null);
+            }}
+          >
+            <LuRotateCcw aria-hidden="true" /> {t("Reset sample data")}
+          </button>
           <p className="dim small">
             <span className={`sync-dot ${syncMode}`} aria-hidden="true" />
             {syncMode === "shared" ? t("Synced: open this link on another device to see the same data.") : t("Sample data. Syncs between tabs in this browser.")}
           </p>
-          <button className="link lang-toggle" lang={lang === "ar" ? "en" : "ar"} onClick={() => setLang(lang === "ar" ? "en" : "ar")}>
-            {lang === "ar" ? "English" : "العربية"}
-          </button>
+          <div className="side-prefs">
+            <button className="link lang-toggle" lang={lang === "ar" ? "en" : "ar"} onClick={() => setLang(lang === "ar" ? "en" : "ar")}>
+              {lang === "ar" ? "English" : "العربية"}
+            </button>
+            <button className="btn sm theme-toggle" aria-pressed={theme === "dark"} onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
+              {theme === "dark" ? <LuSun aria-hidden="true" /> : <LuMoon aria-hidden="true" />}
+              {theme === "dark" ? t("Light mode") : t("Dark mode")}
+            </button>
+          </div>
         </div>
 
         </div>

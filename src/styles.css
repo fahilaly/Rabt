@@ -1,6 +1,6 @@
 /* Design C: Arabic first. Green sidebar on the start side (right in Arabic), white work area,
-   bordered lists with small radii, one green accent. The recovery ward keeps its dark
-   departures-board look. Spacing uses logical properties so Arabic (RTL) and English (LTR)
+   bordered lists with small radii, one green accent. Light by default with a dark mode
+   switch; the recovery-ward board follows the theme. Spacing uses logical properties so Arabic (RTL) and English (LTR)
    both work from one stylesheet. */
 :root {
   --bg: #ffffff;
@@ -29,15 +29,19 @@
   --side-line: #3f8f65;
   --side-hover: rgba(255, 255, 255, 0.1);
 
-  /* board is always dark */
-  --b-bg: #0c0e0d;
-  --b-row: #121513;
-  --b-line: #242926;
-  --b-text: #ecebe4;
-  --b-dim: #8d928c;
-  --b-yellow: #f5c542;
-  --b-red: #ff5f52;
-  --b-green: #57d08b;
+  /* recovery-ward board, light */
+  --b-bg: #ffffff;
+  --b-row: #f6f8f7;
+  --b-line: #e2e5e3;
+  --b-text: #1a1f1c;
+  --b-dim: #5a635e;
+  --b-yellow: #9a4d00;
+  --b-red: #a8201a;
+  --b-green: #006c35;
+  --b-clock: #006c35;
+  --b-hover: #eef5f1;
+  --b-left: #9aa19c;
+  --b-late: #fdecea;
 
   --sans: "IBM Plex Sans", "IBM Plex Sans Arabic", system-ui, -apple-system, "Segoe UI", sans-serif;
   --arabic: "IBM Plex Sans Arabic", "IBM Plex Sans", system-ui, sans-serif;
@@ -68,6 +72,18 @@
     --side: #0b3f23;
     --side-dim: #a9cdb8;
     --side-line: #2c6a48;
+    --b-bg: #0c0e0d;
+    --b-row: #121513;
+    --b-line: #242926;
+    --b-text: #ecebe4;
+    --b-dim: #8d928c;
+    --b-yellow: #f5c542;
+    --b-red: #ff5f52;
+    --b-green: #57d08b;
+    --b-clock: #f5c542;
+    --b-hover: #1a1e1b;
+    --b-left: #5d625e;
+    --b-late: rgba(255, 95, 82, 0.08);
     color-scheme: dark;
   }
 }
@@ -93,6 +109,18 @@
   --side: #0b3f23;
   --side-dim: #a9cdb8;
   --side-line: #2c6a48;
+  --b-bg: #0c0e0d;
+  --b-row: #121513;
+  --b-line: #242926;
+  --b-text: #ecebe4;
+  --b-dim: #8d928c;
+  --b-yellow: #f5c542;
+  --b-red: #ff5f52;
+  --b-green: #57d08b;
+  --b-clock: #f5c542;
+  --b-hover: #1a1e1b;
+  --b-left: #5d625e;
+  --b-late: rgba(255, 95, 82, 0.08);
   color-scheme: dark;
 }
 
@@ -188,7 +216,8 @@ span.mono, .b-est { direction: ltr; unicode-bidi: isolate; }
 .clock { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
 .clock-time { font-size: 1.3rem; }
 .clock-actions { display: flex; gap: 6px; }
-.lang-toggle { justify-self: start; font-size: 0.95rem; }
+.side-prefs { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.lang-toggle { font-size: 0.95rem; }
 .bell { position: relative; }
 .bell .dot {
   position: absolute;
@@ -379,14 +408,14 @@ span.mono, .b-est { direction: ltr; unicode-bidi: isolate; }
 .result-name { font-size: 1.1rem; font-weight: 700; }
 
 /* ---------- recovery ward: departures board ---------- */
-.board { min-height: 100vh; background: var(--b-bg); color: var(--b-text); display: flex; flex-direction: column; color-scheme: dark; }
+.board { min-height: 100vh; background: var(--b-bg); color: var(--b-text); display: flex; flex-direction: column; }
 .board-full { position: fixed; inset: 0; z-index: 70; overflow: auto; padding-top: env(safe-area-inset-top, 0px); }
 .board-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; padding: 26px 32px 18px; border-bottom: 1px solid var(--b-line); }
 .board-title { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; font-size: 1.8rem; font-weight: 700; }
 .board-ar { font-weight: 500; color: var(--b-dim); font-size: 1.3rem; }
 .board-sub { color: var(--b-dim); margin-top: 4px; }
 .board-right { display: flex; align-items: center; gap: 18px; }
-.board-clock { font-size: 2.6rem; color: var(--b-yellow); line-height: 1; letter-spacing: 0.02em; }
+.board-clock { font-size: 2.6rem; color: var(--b-clock); line-height: 1; letter-spacing: 0.02em; }
 .board-btn { display: inline-flex; gap: 6px; align-items: center; height: 34px; padding: 0 12px; background: none; border: 1px solid var(--b-line); border-radius: var(--r-sm); color: var(--b-text); cursor: pointer; }
 .board-btn:hover { border-color: var(--b-dim); }
 .board-summary { display: flex; gap: 28px; flex-wrap: wrap; padding: 12px 32px; border-bottom: 1px solid var(--b-line); color: var(--b-dim); font-size: 0.95rem; }
@@ -409,9 +438,9 @@ span.mono, .b-est { direction: ltr; unicode-bidi: isolate; }
 .board-table td { padding: 15px 16px; border-bottom: 1px solid var(--b-line); white-space: nowrap; }
 .board-table tbody tr { cursor: pointer; }
 .board-table tbody tr:nth-child(even) td { background: var(--b-row); }
-.board-table tbody tr:hover td { background: #1a1e1b; }
+.board-table tbody tr:hover td { background: var(--b-hover); }
 .board-table .c-time { width: 1%; }
-.board-table td.c-time { color: var(--b-yellow); }
+.board-table td.c-time { color: var(--b-clock); }
 .board-table .c-num { text-align: end; width: 1%; }
 .b-name { font-weight: 600; }
 .b-chair { margin-inline-start: 8px; color: var(--b-yellow); }
@@ -423,9 +452,8 @@ span.mono, .b-est { direction: ltr; unicode-bidi: isolate; }
 .b-white { color: var(--b-text); }
 .b-wait { font-size: 1.25rem; }
 .b-est { color: var(--b-dim); }
-.row-late td { background: rgba(255, 95, 82, 0.08) !important; }
-.row-left td { color: #5d625e; }
-.row-left td.c-time { color: #6f6a55; }
+.row-late td { background: var(--b-late) !important; }
+.row-left td, .row-left td.c-time { color: var(--b-left); }
 .b-empty { color: var(--b-dim); padding: 28px 16px !important; }
 .board-foot { padding: 14px 32px 20px; color: var(--b-dim); font-size: 0.88rem; border-top: 1px solid var(--b-line); }
 
@@ -518,7 +546,7 @@ span.mono, .b-est { direction: ltr; unicode-bidi: isolate; }
 .sms-toast {
   position: fixed;
   inset-inline-end: max(16px, env(safe-area-inset-right, 0px));
-  top: calc(16px + env(safe-area-inset-top, 0px));
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   width: 350px;
   max-width: calc(100vw - 32px);
   display: grid;
@@ -536,7 +564,8 @@ span.mono, .b-est { direction: ltr; unicode-bidi: isolate; }
 }
 .sms-toast-to { font-size: 0.8rem; font-weight: 700; color: var(--accent); }
 .sms-toast-text { font-size: 0.92rem; line-height: 1.5; max-height: 4.5em; overflow: hidden; }
-@keyframes toast-in { from { transform: translateY(-8px); opacity: 0; } to { transform: none; opacity: 1; } }
+.content.with-demo ~ .sms-toast { bottom: 132px; }
+@keyframes toast-in { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
 
 /* ---------- narrow screens: the sidebar becomes a top bar with a menu button ---------- */
 @media (max-width: 860px) {
@@ -601,10 +630,11 @@ span.mono, .b-est { direction: ltr; unicode-bidi: isolate; }
   .content-board.with-demo, .with-demo .drawer-body { padding-bottom: 160px; }
   .content.with-demo ~ .sms-panel { bottom: 150px; max-height: calc(100vh - 230px); }
 
-  /* SMS pop-up: a slim strip under the top bar */
-  .sms-toast { top: calc(62px + env(safe-area-inset-top, 0px)); inset-inline: 12px; width: auto; max-width: none; padding: 8px 12px; gap: 2px; border-radius: 10px; }
+  /* SMS pop-up: a slim strip at the bottom, above the demo bar */
+  .sms-toast { bottom: calc(12px + env(safe-area-inset-bottom, 0px)); inset-inline: 12px; width: auto; max-width: none; padding: 8px 12px; gap: 2px; border-radius: 10px; }
   .sms-toast-to { font-size: 0.75rem; }
   .sms-toast-text { font-size: 0.85rem; max-height: 3em; }
+  .content.with-demo ~ .sms-toast { bottom: calc(146px + env(safe-area-inset-bottom, 0px)); }
   .sms-panel { inset-inline: 12px; width: auto; max-width: none; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
