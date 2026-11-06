@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
-import { LuBell, LuRotateCcw, LuPlay, LuMessageSquare, LuMenu, LuX, LuMoon, LuSun } from "react-icons/lu";
+import { LuBell, LuRotateCcw, LuPlay, LuMessageSquare, LuMenu, LuX, LuMoon, LuSun, LuChartLine, LuShieldCheck } from "react-icons/lu";
 import { fmtTime, isLate, useStore, WAITING } from "./store";
 import { NoticeList } from "./ui";
 import HospitalPortal from "./HospitalPortal";
 import CompanyPortal from "./CompanyPortal";
 import TransportPortal from "./TransportPortal";
+import { ImpactPage, PrivacyPage } from "./AboutPages";
 import { DemoBar, SmsPanel, SmsToast, smsFor, startDemo, type View } from "./Demo";
 import { useT } from "./i18n";
 
@@ -21,14 +22,17 @@ interface Prefs {
   htab: HTab;
   ctab: CTab;
   ttab: TTab;
+  /** an "About Rabt" page shown instead of the role's section */
+  about: About | null;
 }
+type About = "impact" | "privacy";
 const PREFS_KEY = "rabt-prototype-view-2";
 const ROLES: [Portal, string, string][] = [
   ["hospital", "Hospital", "1"],
   ["company", "Company", "2"],
   ["transport", "Transport", "3"],
 ];
-const defaults: Prefs = { portal: "hospital", hospitalId: "h1", companyId: "c1", driverId: "d1", htab: "ward", ctab: "requests", ttab: "driver" };
+const defaults: Prefs = { portal: "hospital", hospitalId: "h1", companyId: "c1", driverId: "d1", htab: "ward", ctab: "requests", ttab: "driver", about: null };
 
 type Theme = "light" | "dark";
 const THEME_KEY = "rabt-theme";
@@ -82,7 +86,7 @@ export default function App() {
   }, [prefs]);
 
   const set = (p: Partial<Prefs>) => {
-    setPrefs((x) => ({ ...x, ...p }));
+    setPrefs((x) => ({ ...x, about: null, ...p }));
     setOpenId(null);
     setBellOpen(false);
   };
@@ -93,18 +97,21 @@ export default function App() {
     setMenuOpen(false);
   };
   const sectionLabel = t(
-    prefs.portal === "hospital"
+    prefs.about
+      ? { impact: "Impact", privacy: "Who sees what" }[prefs.about]
+      : prefs.portal === "hospital"
       ? { ward: "Recovery ward", patients: "Patients", register: "Register pilgrim" }[prefs.htab]
       : prefs.portal === "company"
         ? { requests: "Pickup requests", pilgrims: "Pilgrims in hospital", history: "Completed" }[prefs.ctab]
         : { driver: "Driver app", dispatch: "Fleet dispatch" }[prefs.ttab]
   );
-  const roleLabel = t(prefs.portal === "hospital" ? "Hospital" : prefs.portal === "company" ? "Company" : "Transport");
+  const roleLabel = t(prefs.about ? "About Rabt" : prefs.portal === "hospital" ? "Hospital" : prefs.portal === "company" ? "Company" : "Transport");
 
   // demo mode moves the screen to each step's view
   const nav = (v: View) => {
     setPrefs((x) => ({
       ...x,
+      about: null,
       portal: v.portal,
       ...(v.htab ? { htab: v.htab } : {}),
       ...(v.ctab ? { ctab: v.ctab } : {}),
@@ -241,18 +248,26 @@ export default function App() {
           <span className="side-current">
             {roleLabel} · <b>{sectionLabel}</b>
           </span>
-          <button
-            className={`icon-btn bell ${bellOpen ? "on" : ""}`}
-            aria-label={unread ? t("Notifications, {n} new", { n: unread }) : t("Notifications")}
-            aria-expanded={bellOpen}
-            onClick={() => {
-              setBellOpen(!bellOpen);
-              if (!bellOpen) setSeen((s) => ({ ...s, [audKey]: Math.max(now, ...mine.map((n) => n.at)) }));
-            }}
-          >
-            <LuBell />
-            {unread > 0 && <span className="dot mono">{unread}</span>}
-          </button>
+          <div className="side-top-actions">
+            <button className="icon-btn top-toggle lang-btn" lang={lang === "ar" ? "en" : "ar"} aria-label={lang === "ar" ? "Switch to English" : "التبديل إلى العربية"} title={lang === "ar" ? "English" : "العربية"} onClick={() => setLang(lang === "ar" ? "en" : "ar")}>
+              {lang === "ar" ? "EN" : "ع"}
+            </button>
+            <button className="icon-btn top-toggle" aria-label={theme === "dark" ? t("Light mode") : t("Dark mode")} title={theme === "dark" ? t("Light mode") : t("Dark mode")} onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
+              {theme === "dark" ? <LuSun /> : <LuMoon />}
+            </button>
+            <button
+              className={`icon-btn bell ${bellOpen ? "on" : ""}`}
+              aria-label={unread ? t("Notifications, {n} new", { n: unread }) : t("Notifications")}
+              aria-expanded={bellOpen}
+              onClick={() => {
+                setBellOpen(!bellOpen);
+                if (!bellOpen) setSeen((s) => ({ ...s, [audKey]: Math.max(now, ...mine.map((n) => n.at)) }));
+              }}
+            >
+              <LuBell />
+              {unread > 0 && <span className="dot mono">{unread}</span>}
+            </button>
+          </div>
           <button className="icon-btn menu-btn" aria-expanded={menuOpen} aria-controls="side-panel" aria-label={menuOpen ? t("Close menu") : t("Menu")} onClick={() => setMenuOpen(!menuOpen)}>
             {menuOpen ? <LuX /> : <LuMenu />}
           </button>
@@ -278,40 +293,50 @@ export default function App() {
         <nav className="side-nav" aria-label={t("Sections")}>
           {prefs.portal === "hospital" && (
             <>
-              <NavItem on={prefs.htab === "ward"} onClick={() => go({ htab: "ward" })} count={wardCount} alert={wardLate}>
+              <NavItem on={!prefs.about && prefs.htab === "ward"} onClick={() => go({ htab: "ward" })} count={wardCount} alert={wardLate}>
                 {t("Recovery ward")}
               </NavItem>
-              <NavItem on={prefs.htab === "patients"} onClick={() => go({ htab: "patients" })} count={treat}>
+              <NavItem on={!prefs.about && prefs.htab === "patients"} onClick={() => go({ htab: "patients" })} count={treat}>
                 {t("Patients")}
               </NavItem>
-              <NavItem on={prefs.htab === "register"} onClick={() => go({ htab: "register" })}>
+              <NavItem on={!prefs.about && prefs.htab === "register"} onClick={() => go({ htab: "register" })}>
                 {t("Register pilgrim")}
               </NavItem>
             </>
           )}
           {prefs.portal === "company" && (
             <>
-              <NavItem on={prefs.ctab === "requests"} onClick={() => go({ ctab: "requests" })} count={needs} alert={needs > 0}>
+              <NavItem on={!prefs.about && prefs.ctab === "requests"} onClick={() => go({ ctab: "requests" })} count={needs} alert={needs > 0}>
                 {t("Pickup requests")}
               </NavItem>
-              <NavItem on={prefs.ctab === "pilgrims"} onClick={() => go({ ctab: "pilgrims" })} count={compActive}>
+              <NavItem on={!prefs.about && prefs.ctab === "pilgrims"} onClick={() => go({ ctab: "pilgrims" })} count={compActive}>
                 {t("Pilgrims in hospital")}
               </NavItem>
-              <NavItem on={prefs.ctab === "history"} onClick={() => go({ ctab: "history" })}>
+              <NavItem on={!prefs.about && prefs.ctab === "history"} onClick={() => go({ ctab: "history" })}>
                 {t("Completed")}
               </NavItem>
             </>
           )}
           {prefs.portal === "transport" && (
             <>
-              <NavItem on={prefs.ttab === "driver"} onClick={() => go({ ttab: "driver" })} count={driverJobs}>
+              <NavItem on={!prefs.about && prefs.ttab === "driver"} onClick={() => go({ ttab: "driver" })} count={driverJobs}>
                 {t("Driver app")}
               </NavItem>
-              <NavItem on={prefs.ttab === "dispatch"} onClick={() => go({ ttab: "dispatch" })} count={openRides} alert={openRides > 0}>
+              <NavItem on={!prefs.about && prefs.ttab === "dispatch"} onClick={() => go({ ttab: "dispatch" })} count={openRides} alert={openRides > 0}>
                 {t("Fleet dispatch")}
               </NavItem>
             </>
           )}
+        </nav>
+
+        <nav className="side-nav side-about" aria-label={t("About Rabt")}>
+          <span className="label">{t("About Rabt")}</span>
+          <NavItem on={prefs.about === "impact"} onClick={() => go({ about: "impact" })}>
+            <LuChartLine aria-hidden="true" /> {t("Impact")}
+          </NavItem>
+          <NavItem on={prefs.about === "privacy"} onClick={() => go({ about: "privacy" })}>
+            <LuShieldCheck aria-hidden="true" /> {t("Who sees what")}
+          </NavItem>
         </nav>
 
         <div className="side-foot">
@@ -350,27 +375,20 @@ export default function App() {
             <span className={`sync-dot ${syncMode}`} aria-hidden="true" />
             {syncMode === "shared" ? t("Synced: open this link on another device to see the same data.") : t("Sample data. Syncs between tabs in this browser.")}
           </p>
-          <div className="side-prefs">
-            <button className="link lang-toggle" lang={lang === "ar" ? "en" : "ar"} onClick={() => setLang(lang === "ar" ? "en" : "ar")}>
-              {lang === "ar" ? "English" : "العربية"}
-            </button>
-            <button className="btn sm theme-toggle" aria-pressed={theme === "dark"} onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
-              {theme === "dark" ? <LuSun aria-hidden="true" /> : <LuMoon aria-hidden="true" />}
-              {theme === "dark" ? t("Light mode") : t("Dark mode")}
-            </button>
-          </div>
         </div>
 
         </div>
         {bellOpen && <Inbox onClose={() => setBellOpen(false)}>{<NoticeList items={mine.slice(0, 14)} onOpen={openFromNotice} />}</Inbox>}
       </aside>
 
-      <main className={`content ${prefs.portal === "hospital" && prefs.htab === "ward" ? "content-board" : ""} ${demoOn ? "with-demo" : ""}`}>
-        {prefs.portal === "hospital" && (
+      <main className={`content ${!prefs.about && prefs.portal === "hospital" && prefs.htab === "ward" ? "content-board" : ""} ${demoOn ? "with-demo" : ""}`}>
+        {prefs.about === "impact" && <ImpactPage />}
+        {prefs.about === "privacy" && <PrivacyPage />}
+        {!prefs.about && prefs.portal === "hospital" && (
           <HospitalPortal hospitalId={prefs.hospitalId} tab={prefs.htab} setTab={(t) => set({ htab: t })} openId={openId} setOpenId={setOpenId} />
         )}
-        {prefs.portal === "company" && <CompanyPortal companyId={prefs.companyId} tab={prefs.ctab} openId={openId} setOpenId={setOpenId} />}
-        {prefs.portal === "transport" && <TransportPortal tab={prefs.ttab} driverId={prefs.driverId} />}
+        {!prefs.about && prefs.portal === "company" && <CompanyPortal companyId={prefs.companyId} tab={prefs.ctab} openId={openId} setOpenId={setOpenId} />}
+        {!prefs.about && prefs.portal === "transport" && <TransportPortal tab={prefs.ttab} driverId={prefs.driverId} />}
       </main>
       {smsOpen && <SmsPanel messages={sms} title={smsTitle} onClose={() => setSmsOpen(false)} />}
       {!smsOpen && toastMsg && <SmsToast m={toastMsg} onOpen={() => { setToast(null); setSmsOpen(true); }} />}
