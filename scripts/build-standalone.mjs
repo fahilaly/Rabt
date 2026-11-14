@@ -4,12 +4,13 @@ import { createRequire } from "node:module";
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { execSync } from "node:child_process";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const require = createRequire(import.meta.url);
 const esbuildPath = process.env.ESBUILD_PATH || "esbuild";
 const esbuild = require(esbuildPath);
 const globalModules = execSync("npm root -g").toString().trim();
-const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 const result = await esbuild.build({
   entryPoints: [path.join(root, "src/main.tsx")],

@@ -4,7 +4,7 @@
 import { createRequire } from "node:module";
 import { execSync } from "node:child_process";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const require = createRequire(import.meta.url);
 let chromium;
@@ -15,7 +15,7 @@ try {
 }
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const APP = "file://" + path.join(root, "dist/rabt-console.html");
+const APP = pathToFileURL(path.join(root, "dist/rabt-console.html")).href;
 const KEY = "rabt-prototype-v1";
 
 const results = [];
@@ -27,12 +27,14 @@ const check = (name, ok, detail = "") => {
 const browser = await chromium.launch();
 const errors = [];
 
-async function open() {
+async function open({ firstVisit = false } = {}) {
   const ctx = await browser.newContext({ viewport: { width: 1400, height: 900 } });
-  await ctx.addInitScript(() => {
-    localStorage.setItem("rabt-welcomed", "1");
-    localStorage.setItem("rabt-lang", "en");
-  });
+  if (!firstVisit) {
+    await ctx.addInitScript(() => {
+      localStorage.setItem("rabt-welcomed", "1");
+      localStorage.setItem("rabt-lang", "en");
+    });
+  }
   const page = await ctx.newPage();
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto(APP);
@@ -49,8 +51,14 @@ const closeNote = async (page) => {
 
 // 1. Guided demo: one pilgrim from arrival to home in ten steps
 {
-  const page = await open();
-  await page.locator(".demo-start").click();
+  const page = await open({ firstVisit: true });
+  const welcome = page.getByRole("dialog");
+  const start = welcome.locator(".welcome-demo");
+  check("First visit focuses the guided demo in Arabic", await start.evaluate((button) =>
+    button === document.activeElement && document.documentElement.dir === "rtl"
+  ));
+  await welcome.getByRole("button", { name: "English" }).click();
+  await welcome.getByRole("button", { name: "Start guided demo" }).click();
   await page.waitForTimeout(600);
   for (let i = 0; i < 9; i++) {
     if (await page.locator(".demo-scene").count()) await page.locator(".demo-scene").click();

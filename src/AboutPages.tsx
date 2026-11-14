@@ -255,7 +255,7 @@ export function PrivacyPage() {
     );
   return (
     <div className="page">
-      <PageHeader title={t("Who sees what")} meta={t("Each side sees only what it needs to move the pilgrim home.")} />
+      <PageHeader title={t("Who sees what")} meta={t("Intended permissions for a live rollout. Demo roles share sample data in this browser.")} />
 
       <div className="table-wrap">
         <table className="table">

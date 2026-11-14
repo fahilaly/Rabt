@@ -84,6 +84,14 @@ export default function App() {
       return false;
     }
   });
+  const welcomeDialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const dialog = welcomeDialog.current;
+    if (dialog && !dialog.open) {
+      dialog.showModal();
+      dialog.querySelector<HTMLButtonElement>(".welcome-demo")?.focus();
+    }
+  });
   const pickRole = (v: Partial<Prefs> | null) => {
     try {
       localStorage.setItem("rabt-welcomed", "1");
@@ -468,12 +476,25 @@ export default function App() {
       )}
       <DemoBar nav={nav} follow={follow} setFollow={setFollow} />
       {welcome && !demoOn && (
-        <div className="welcome" role="dialog" aria-modal="true" aria-labelledby="welcome-title">
+        <dialog className="welcome" ref={welcomeDialog} aria-labelledby="welcome-title" aria-describedby="welcome-description" onCancel={(event) => {
+          event.preventDefault();
+          pickRole({ portal: "hospital", htab: "patients" });
+        }}>
           <div className="welcome-box">
-            <div className="wm welcome-wm">{t("Rabt")}</div>
-            <h1 id="welcome-title">{t("Who are you?")}</h1>
-            <p className="dim">{t("Pick your role to start. You can switch any time from the top of the menu.")}</p>
-            <div className="welcome-roles">
+            <div className="welcome-heading">
+              <div className="wm welcome-wm">{t("Rabt")}</div>
+              <button className="btn sm" lang={lang === "ar" ? "en" : "ar"} onClick={() => setLang(lang === "ar" ? "en" : "ar")}>
+                {lang === "ar" ? "English" : "العربية"}
+              </button>
+            </div>
+            <h1 id="welcome-title">{t("From hospital to accommodation")}</h1>
+            <p id="welcome-description">{t("Follow Ahmad as the hospital, travel company, and driver coordinate his ride and confirm the handoff.")}</p>
+            <button className="btn primary welcome-demo" onClick={() => pickRole(null)}>
+              <LuPlay aria-hidden="true" /> {t("Start guided demo")}
+            </button>
+            <p className="dim small">{t("The demo uses sample records and simulated messages.")}</p>
+            <h2 id="welcome-roles-title">{t("Explore by role")}</h2>
+            <div className="welcome-roles" role="group" aria-labelledby="welcome-roles-title">
               <button className="welcome-role" onClick={() => pickRole({ portal: "hospital", htab: "patients" })}>
                 <b>{t("Hospital staff")}</b>
                 <span>{t("Register pilgrims, record diagnosis, mark ready for transport.")}</span>
@@ -487,11 +508,8 @@ export default function App() {
                 <span>{t("Accept pickups and confirm each step.")}</span>
               </button>
             </div>
-            <button className="btn primary welcome-demo" onClick={() => pickRole(null)}>
-              <LuPlay aria-hidden="true" /> {t("Or watch the full story")}
-            </button>
           </div>
-        </div>
+        </dialog>
       )}
     </div>
   );

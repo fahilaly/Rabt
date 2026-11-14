@@ -6,6 +6,12 @@ Team Tronx · MEDATHON 2026 (Saudi Youth Healthcare Forum, Jeddah) · Track 1: C
 
 **Live prototype:** https://rabt-snowy.vercel.app/
 
+## Try the guided demo
+
+Open the prototype and choose **Start guided demo**. Use **Next** to follow Ahmad from the hospital desk to his accommodation, or select **Play** to watch the sequence. Look for the handoff where the nurse checks the driver's name and plate before Ahmad leaves. You can also explore the hospital, company, or driver view on your own.
+
+The demo uses sample records, simulated SMS, and an in-app preview of the family status page. All roles share the same browser data so you can switch between them without signing in.
+
 <img src="docs/qr.png" alt="QR code that opens the Rabt prototype" width="200">
 
 ![Recovery ward screen](docs/screenshots/ward-screen.png)
@@ -45,11 +51,13 @@ If the company doesn't respond, Rabt escalates automatically:
 
 If something goes wrong (a very late car, a wrong driver, nobody answering), the hospital uses **Report a problem**. The report goes to Rabt and the company, who must fix it within 30 minutes. It is handled between the two of them and is not sent to the Ministry.
 
-The pilgrim's family or group leader can follow the journey home too. If the booking has a family contact (or the hospital adds one), they get an SMS when the pilgrim is ready to leave, when a car is on the way, and when the pilgrim is back, plus a simple status page. It shows where the pilgrim is on the way home and nothing medical.
+The prototype previews the family's status page and the messages they would receive when the pilgrim is ready, when a car is on the way, and when the pilgrim arrives. Open **Messages** to see the simulated SMS.
 
 Patients who need medical transport are not part of Rabt. The hospital decides, and the Red Crescent and 911 handle those cases as they do today.
 
 ## Who sees what
+
+These are the intended access rules for a live rollout. The prototype illustrates them in each view using shared sample data.
 
 | | Hospital | Company | Driver | Family |
 |---|---|---|---|---|
@@ -58,8 +66,6 @@ Patients who need medical transport are not part of Rabt. The hospital decides, 
 | Expected ready time | Yes | Yes | No | No |
 | Where the pilgrim is on the way home | Yes | Yes | Their own trips | Yes |
 | Timeline of every action | Yes | Their own pilgrims | Their own trips | No |
-
-The diagnosis never leaves the hospital. Each company sees only its own pilgrims and its own scorecard.
 
 ## Screens
 
@@ -105,12 +111,6 @@ The diagnosis never leaves the hospital. Each company sees only its own pilgrims
 - **Impact:** a simple simulator comparing a crowded ward today with the same ward using Rabt.
 - **Company scorecard:** response time, ward wait, late arrivals and reminders per company, plus a chart of the busiest pickup hours so companies know when to keep a car free.
 - **Who sees what:** the privacy rules above.
-
-## Try the guided demo
-
-Open the live link and press **Start demo**. It follows one pilgrim, Ahmad, from the emergency desk to his hotel in ten steps. Each step opens with a short card saying where we are (hospital, company or driver), then switches to that screen and highlights Ahmad's row. Use **Next** to go step by step or **Play** to run it on its own. **Messages** shows the SMS Rabt would send. In this prototype no SMS is actually sent.
-
-Outside the demo, you can switch freely between Hospital, Company and Transport from the sidebar. When an action on one screen notifies another role, a small note appears with a button to jump to that screen.
 
 ## Run it locally
 
@@ -187,7 +187,7 @@ in_treatment → ready → (ride_requested) → assigned → accepted → picked
 ## Next steps
 
 1. Pilot in one Makkah hospital with two Umrah companies and one licensed transport partner.
-2. Measure the minutes from *ready* to *departure* before and after Rabt.
+2. Compare minutes from *ready for transport* to *verified handoff* before and during the pilot.
 3. Confirm the legal basis and consent under the Saudi Personal Data Protection Law (PDPL).
 4. Replace sample stay times with real data from the pilot.
 

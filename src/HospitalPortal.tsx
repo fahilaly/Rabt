@@ -573,7 +573,7 @@ function Accuracy({ p }: { p: Pilgrim }) {
 
 function DiagnoseModal({ p, open, onClose }: { p: Pilgrim; open: boolean; onClose: () => void }) {
   const { diagnose, company } = useStore();
-  const { t, p: pn, lang, dur } = useT();
+  const { t, p: pn, dur } = useT();
   const [cond, setCond] = useState(p.condition ?? "");
   const [note, setNote] = useState(p.diagnosedAt ? p.clinicalNote : "");
   const [stay, setStay] = useState<number | null>(null);
@@ -610,7 +610,7 @@ function DiagnoseModal({ p, open, onClose }: { p: Pilgrim; open: boolean; onClos
       </fieldset>
       {suggestion && (
         <p className="dim small">
-          {t("Suggested from similar cases: {dur}, typical for {condition}. Change it if you disagree.", { dur: dur(suggestion), condition: lang === "ar" ? t(conditionLabel(cond)) : conditionLabel(cond).toLowerCase() })}
+          {t("Sample planning estimate: {dur}. Adjust it to reflect when you expect the patient to be ready.", { dur: dur(suggestion) })}
         </p>
       )}
       <p className="dim small">{t("{company} receives the expected ready time only, never the diagnosis.", { company: c.name })}</p>

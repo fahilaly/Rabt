@@ -620,15 +620,19 @@ span.mono, .b-est { direction: ltr; unicode-bidi: isolate; }
 .demo-tools summary { cursor: pointer; color: var(--side-dim); font-size: 0.88rem; }
 .demo-tools[open] { gap: 10px; }
 .demo-tools > * + * { margin-top: 10px; }
-.welcome { position: fixed; inset: 0; z-index: 95; background: var(--scrim); display: grid; place-items: center; padding: 16px; }
-.welcome-box { width: min(560px, 100%); max-height: 100%; overflow: auto; background: var(--bg); border-radius: 12px; padding: 28px; display: grid; gap: 12px; }
+.welcome { width: min(560px, calc(100% - 32px)); max-height: calc(100% - 32px); overflow: auto; background: var(--bg); color: var(--ink); border: 1px solid var(--line-2); border-radius: 12px; padding: 0; }
+.welcome::backdrop { background: var(--scrim); }
+.welcome-box { padding: clamp(16px, 5vw, 28px); display: grid; gap: 12px; }
+.welcome-box h1, .welcome-box h2, .welcome-box p { margin: 0; }
+.welcome-box h2 { margin-top: 8px; font-size: 1rem; }
+.welcome-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .welcome-wm { color: var(--accent); }
 .welcome-roles { display: grid; gap: 10px; margin-top: 6px; }
 .welcome-role { display: grid; gap: 2px; text-align: start; padding: 14px 16px; border: 1px solid var(--line-2); border-radius: var(--r-md); background: var(--bg); color: var(--ink); cursor: pointer; }
 .welcome-role:hover { border-color: var(--accent); background: var(--accent-tint); }
 .welcome-role b { font-size: 1.05rem; }
 .welcome-role span { color: var(--ink-2); font-size: 0.9rem; }
-.welcome-demo { justify-self: start; margin-top: 4px; }
+.welcome-demo { justify-content: center; min-height: 44px; margin-top: 4px; }
 
 /* ---------- narrow screens: the sidebar becomes a top bar with a menu button ---------- */
 @media (max-width: 860px) {
