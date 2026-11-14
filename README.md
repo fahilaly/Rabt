@@ -4,7 +4,7 @@
 
 Team Tronx · MEDATHON 2026 (Saudi Youth Healthcare Forum, Jeddah) · Track 1: Crowd & Patient Flow · MED-5XWGZT
 
-**Live prototype:** https://rabt-snowy.vercel.app/
+**Live prototype:** https://rabt-tan.vercel.app/
 
 ## Try the guided demo
 
@@ -12,7 +12,7 @@ Open the prototype and choose **Start guided demo**. Use **Next** to follow Ahma
 
 The demo uses sample records, simulated SMS, and an in-app preview of the family status page. All roles share the same browser data so you can switch between them without signing in.
 
-<img src="docs/qr.png" alt="QR code that opens the Rabt prototype" width="200">
+<img src="docs/qr.png" alt="Scan the RABT QR code to open the live prototype" width="240">
 
 ![Recovery ward screen](docs/screenshots/ward-screen.png)
 
